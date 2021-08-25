@@ -1,27 +1,20 @@
-# from matplotlib import pyplot as plt
 from collections import Counter
+from sklearn import preprocessing
 from math import log
-
-import numpy as np
-from sklearn import preprocessing as pp, preprocessing
+from numpy import ravel
 import pandas as pd
-from matplotlib import pyplot as plt
-import random as rnd
-
-y = [[1, 2, 500, 6, 9, 8, 5, 2, 1, 4], [4, 5, 9, 3, 2, 0, 1, 4, 5, 8], [5, 2, 3, 6, 9, 8, 5, 2, 1, 4],
-     [5, 6, 9, 0, 3, 2, 5, 6, 9, 7], [4, 8, 5, 0, 3, 6, 9, 5, 2, 0], ]
 
 
-def minMax(dataset):  # Min-Max Scalling
+def minMax(dataset):  # Min-Max Scaling
     minimum = [min(x) for x in zip(*dataset)]
     maximum = [max(x) for x in zip(*dataset)]
     for row in range(len(dataset)):  # Iterate through rows
-        for column in range(len(dataset[0])):  # Iterate through colums
+        for column in range(len(dataset[0])):  # Iterate through columns
             dataset[row][column] = (dataset[row][column] - minimum[column]) / (maximum[column] - minimum[column])
     return dataset
 
 
-def zScore(dataset):  # Z-Score Scalling
+def zScore(dataset):  # Z-Score Scaling
     transpose_dataset = [list(t) for t in zip(*dataset)]  # transpose dataset matrix
     mean_transpose_dataset = [sum(row) / len(row) for row in transpose_dataset]  # for every feature calculate the mean
 
@@ -31,25 +24,20 @@ def zScore(dataset):  # Z-Score Scalling
         feature_deviance = ((sum(feature_deviance) * (
                 1 / (len(feature_deviance))))) ** 0.5  # sqrt(Σ(feature_deviance * 1/len(feature_deviance)
 
-        for column in range(len(transpose_dataset[0])):  # Iterate through colums (data)
+        for column in range(len(transpose_dataset[0])):  # Iterate through columns (data)
             transpose_dataset[row][column] = (transpose_dataset[row][column] - mean_transpose_dataset[
                 row]) / feature_deviance  # calculate Z-Score
 
-    return [list(t) for t in zip(*transpose_dataset)]  # reutrn dataset to original normal shape
+    return [list(t) for t in zip(*transpose_dataset)]  # return dataset to original normal shape
 
 
 def decimalScaling(dataset):
     maxValueLength = len(str(max(
         [max(x) for x in dataset])))  # Iterate through all values in dataset and get the length of the maximum value
     for row in range(len(dataset)):  # Iterate through rows
-        for column in range(len(dataset[0])):  # Iterate through colums
+        for column in range(len(dataset[0])):  # Iterate through columns
             dataset[row][column] = (dataset[row][column] / (10 ** maxValueLength))
     return dataset
-
-
-minMaxMethod = pp.MinMaxScaler().fit_transform(y)
-z_scoreMethod = pp.StandardScaler().fit_transform(y)
-decimalScaleMethod = pp.Normalizer().fit_transform(y)
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------------------
@@ -79,13 +67,14 @@ def equalWidth(dataset, n_bins=2):
         bins_sizes.append(min_value + (width * i))
 
     for i in range(n_bins):
-        values_group = []  # Contain the array valeus of each bin
+        values_group = []  # Contain the array values of each bin
         for value in dataset:
             if value >= bins_sizes[i] and value <= bins_sizes[i + 1]:  # check which group the value should get into
                 values_group.append(value)
         fixed_width_bins.append(values_group)  # add each value to right bin
 
     return fixed_width_bins
+
 
 # Smoothing By Bin Means
 def binMeans(dataset, interval=2):
@@ -105,7 +94,7 @@ def binBoundaries(dataset, interval=2):
     max_width = round(len(dataset) / interval) - 1
     min_width = 0
 
-    for bin in range(len(sort_data)):  # Iteate thorugh bins
+    for bin in range(len(sort_data)):  # Iterate through bins
         for index in range(len(sort_data[bin])):  # Iterate through values of each bin
             current = sort_data[bin]  # Make code more crystal clear
             if (index != min_width) and (index != max_width):  # check if bin boundaries has been reached
@@ -124,13 +113,13 @@ def categoricalToNumeric(dataset):
     :return: Numeric dataset.
     """
     pp = preprocessing.LabelEncoder()
-    print('Converting categorical data to numeric data...')
-    if (isinstance(dataset, pd.Series)):
+
+    if isinstance(dataset, pd.Series):
         pp.fit(dataset)
         return pp.transform(dataset)
 
-    elif (isinstance(dataset, list)):
-        dataset = np.ravel(dataset)
+    elif isinstance(dataset, list):
+        dataset = ravel(dataset)
         pp.fit(dataset)
         return pp.transform(dataset)
     else:
@@ -138,10 +127,9 @@ def categoricalToNumeric(dataset):
             if type(column[1]) is str:
                 pp.fit(dataset[column])
                 dataset[column] = pp.transform(dataset[column])
-    print('All data successfully converted!')
 
 
-def discretization(dataset, column, bins, mode, max_bins = None,  labels=None):
+def discretization(dataset, column, bins, mode, max_bins=None, labels=None):
     """
     :param max_bins: New bins range for entropy binning
     :param dataset: Pandas DataFrame
@@ -155,10 +143,10 @@ def discretization(dataset, column, bins, mode, max_bins = None,  labels=None):
         dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=labels)
 
     elif mode == 'equal-frequency':
-        dataset[column] = pd.cut(x= dataset[column], bins=bins, labels=labels)
+        dataset[column] = pd.cut(x=dataset[column], bins=bins, labels=labels)
 
     elif mode == 'entropy':
-        entropyDiscretization(dataset= dataset, column=column, bins_range= bins, max_bins= max_bins)
+        entropyDiscretization(dataset=dataset, column=column, bins_range=bins, max_bins=max_bins)
 
     else:
         raise NameError("Mode does not exist!")
@@ -263,7 +251,16 @@ def info_gain(data, column, l_base=2):
                 conditional_entropy(data, column, feature_, class_, l_base))
     return sum_gain
 
+
 def entropyDiscretization(dataset, column, bins_range, max_bins):
+    """
+    Supervised Binning, Split the data into groups that has the most information gain.
+    :param dataset: Pandas DataFrame.
+    :param column: column for binning
+    :param bins_range: split column for (x) equal groups.
+    :param max_bins: choose (x) groups to bin that has the most information gain.
+    :return: Binned column by entropy.
+    """
     info_gain_dict = {}
 
     # Preserve original dataset
@@ -288,5 +285,6 @@ def entropyDiscretization(dataset, column, bins_range, max_bins):
     new_bins.sort()
 
     # Binning the original array with best entropy values
-    dataset[column] = pd.cut(dataset[column], new_bins, labels=[chr(i) for i in range(ord('A'), ord(chr(65+len(new_bins)-1)))]).values.add_categories('other')
+    dataset[column] = pd.cut(dataset[column], new_bins, labels=[chr(i) for i in range(
+        ord('A'), ord(chr(65 + len(new_bins) - 1)))]).values.add_categories('other')
     dataset[column] = dataset[column].fillna('other')

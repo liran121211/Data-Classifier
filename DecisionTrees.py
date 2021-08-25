@@ -164,10 +164,12 @@ class DecisionTreeSKLearn:
     def run(self):
 
         # Preprocess data
+        print('Converting categorical data to numeric data...')
         categoricalToNumeric(self.X_train)
         categoricalToNumeric(self.y_train)
         categoricalToNumeric(self.X_test)
         categoricalToNumeric(self.y_test)
+        print('All data successfully converted!')
 
         # Train Model
         print('Training Model...')
