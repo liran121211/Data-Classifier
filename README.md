@@ -7,9 +7,6 @@
 *** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
 *** https://www.markdownguide.org/basic-syntax/#reference-style-links
 -->
-[![Contributors][contributors-shield]][contributors-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
-
 
 
 <!-- PROJECT LOGO -->
@@ -81,7 +78,7 @@ PickleFiles.py File:
 * An option to save the current results or load the instances of classes from pickle files is added in order to save some process time.
 * Dedicated folder for pickle files are automatically created after a successfully classification.
 
-### Built With
+## Built With
 * [Python 3.8.0](https://www.python.org/downloads/release/python-380/)
 
 
@@ -90,7 +87,7 @@ PickleFiles.py File:
 ## Getting Started
 In order to use the classifier, Python V3.8.0 or above is needed.
 
-### Prerequisites
+## Prerequisites
 
 The libraries below must be installed in order to use the classifier 
 * os-sys
@@ -182,7 +179,7 @@ Other Projects Link: [Projects](https://github.com/liran121211)
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 [contributors-shield]: https://img.shields.io/github/contributors/othneildrew/Best-README-Template.svg?style=for-the-badge
-[contributors-url]: https://github.com/othneildrew/Best-README-Template/graphs/contributors
+[contributors-url]: https://github.com/liran121211/Dataset_Classifier/graphs/contributors
 [forks-shield]: https://img.shields.io/github/forks/othneildrew/Best-README-Template.svg?style=for-the-badge
 [forks-url]: https://github.com/othneildrew/Best-README-Template/network/members
 [stars-shield]: https://img.shields.io/github/stars/othneildrew/Best-README-Template.svg?style=for-the-badge
