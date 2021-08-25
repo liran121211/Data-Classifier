@@ -1,68 +1,63 @@
-import pandas as pd
-
+from os.path import basename
+from pandas import read_csv
 from NaiveBayes import *
 from DecisionTrees import *
 from KNN import *
 from K_Means import *
+from Evaluator import *
+import pickle
 
-ERROR_LOOP = True
-DISCRETIZATION_MODE = {'1': 'equal-width', '2': 'equal-frequency', '3': 'entropy'}
 
-while (ERROR_LOOP):
-    try:
-        # Initialize process
-        train_path = "C:\\Users\\Liran\\PycharmProjects\\Final_project\\historical-senate-predictions.csv"
-        test_path = "historical-senate-predictions.csv"
-        user_bins = int(input("\nEnter amount of bins: "))
-        bin_mode = input("\nEnter discretization mode:\n1) Equal-Width\n2) Equal-Frequency\n3) Entropy\nYour choice: ")
-        bin_mode = DISCRETIZATION_MODE[bin_mode]
-        train = pd.read_csv(train_path, delimiter=',')
-        test = pd.read_csv(test_path, delimiter=',')
+def run():
+    discretization_mode = {'1': 'equal-width', '2': 'equal-frequency', '3': 'entropy'}
+    train_path = input("Please enter training file location: ")
+    test_path = input("Please enter testing file location: ")
+    user_bins = int(input("\nEnter amount of bins: "))
+    bin_mode = input("\nEnter discretization mode:\n1) Equal-Width\n2) Equal-Frequency\n3) Entropy\nYour choice: ")
+    user_algorithm = input("\nEnter algorithm mode:\n"
+                           "1) Decision Tree\n"
+                           "2) SKLearn Decision Tree\n"
+                           "3) Naive Bayes\n"
+                           "4) SKLearn Naive Bayes\n"
+                           "5) KNN\n"
+                           "6) K-Means\n"
+                           "Your choice: ")
 
-        decision_tree_sk = DecisionTreeSKLearn(train_data=train, test_data=test, max_depth=10, random_state=10,
-                                               train_file_name=os.path.basename(train_path),
-                                               test_file_name=os.path.basename(test_path))
-        decision_tree = DecisionTree(train_data=train, test_data=test, train_file_name=os.path.basename(train_path),
-                                     test_file_name=os.path.basename(test_path), threshold=0.001, bins=user_bins,
-                                     discretization_mode=bin_mode)
-        naive_bayes = NaiveBayes(train_file=train, test_file=test, bins=user_bins, discretization_mode=bin_mode)
-        naive_bayes_sk = NaiveBayes_SKLearn(train_file=train, test_file=test)
-        knn = KNN(train_file=train, test_file=test, k_neighbors=5)
-        k_means = KMeans(train_data=train, k_means=5, max_iterations=100, random_state=30)
-        ERROR_LOOP = False
+    x = 'C:\\Users\\Liran\\PycharmProjects\\Final_project\\datasets\\train.csv'
+    y = 'C:\\Users\\Liran\\PycharmProjects\\Final_project\\datasets\\test.csv'
+    bin_mode = discretization_mode[bin_mode]
+    train = read_csv(filepath_or_buffer=x, delimiter=',')
+    test = read_csv(filepath_or_buffer=y, delimiter=',')
 
-        # Run process
-        print('\nDecision Tree Started:')
+    if user_algorithm == '1':
+        decision_tree = DecisionTree(train, test, basename(train_path), basename(test_path), 0.001, user_bins, bin_mode)
         decision_tree.run()
-        print('-' * 50)
-        print('\nSKLearn Decision Tree Started:')
+        analysis(decision_tree)
+    if user_algorithm == '2':
+        decision_tree_sk = DecisionTreeSKLearn(train, test, 10, 10, basename(train_path), basename(test_path))
         decision_tree_sk.run()
-        print('-' * 50)
-        print('\nNaive Bayes Started:')
+        analysis(decision_tree_sk)
+    if user_algorithm == '3':
+        naive_bayes = NaiveBayes(train, test, basename(train_path), basename(test_path), user_bins, bin_mode)
         naive_bayes.run()
-        print('-' * 50)
-        print('\nSKLearn Naive Bayes Started:')
+        analysis(naive_bayes)
+    if user_algorithm == '4':
+        naive_bayes_sk = NaiveBayes_SKLearn(train, test, basename(train_path), basename(test_path))
         naive_bayes_sk.run()
-        print('-' * 50)
-        print('\nKNN Started:')
+        analysis(naive_bayes_sk)
+    if user_algorithm == '5':
+        knn = KNN(train, test, 5, basename(train_path), basename(test_path))
         knn.run()
-        print('-' * 50)
-        print('\nK-Means Started:')
+        analysis(knn)
+    if user_algorithm == '6':
+        k_means = KMeans(train, 5, 100, 30)
         k_means.run()
-        print('-' * 50)
+        analysis(k_means)
 
-
-
-    except ValueError:
-        print('Input is invalid, try again...')
-        print(ValueError)
-        ERROR_LOOP = True
-    except FileNotFoundError:
-        print('File does not exist, try again...')
-        print(FileNotFoundError)
-        ERROR_LOOP = True
-
-# train = pd.read_csv("historical-senate-predictions.csv", delimiter=',')[:50]
-# test = pd.read_csv("historical-senate-predictions.csv", delimiter=',')[51:]
-# decision_tree_sk = DecisionTreeSKLearn(train_data=train, test_data=test, max_depth=10, random_state=10)
-# decision_tree_sk.run()
+    return naive_bayes_sk
+run()
+x = run()
+# Step 2
+with open('config.dictionary', 'wb') as config_dictionary_file:
+    # Step 3
+    pickle.dump(x, config_dictionary_file)

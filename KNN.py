@@ -1,13 +1,17 @@
+import os
 from math import sqrt
 from Preprocessing import categoricalToNumeric, validator
-
+from pandas import merge, DataFrame
 
 class KNN:
-    def __init__(self, train_file, test_file, k_neighbors):
+    def __init__(self, train_file, test_file, k_neighbors, train_file_name, test_file_name):
         validator(train_data=train_file, test_data=test_file, k_neighbors=k_neighbors)
         self.k_neighbors = k_neighbors
         self.train_data = train_file
         self.test_data = test_file
+        self.train_file_name = train_file_name
+        self.test_file_name = test_file_name
+        self.y_prediction = []
         self.score = 0
 
     def rowsDistance(self, row1, row2):
@@ -83,6 +87,12 @@ class KNN:
         self.train_data = categoricalToNumeric(self.train_data)
         self.test_data = categoricalToNumeric(self.test_data)
 
+        # Export clean file
+        print('Exporting cleansed csv file...')
+        self.train_data.to_csv(os.path.join(os.getcwd(), "KNN_train_" + self.train_file_name[:-4] + "_clean.csv"))
+        self.test_data.to_csv(os.path.join(os.getcwd(), "KNN__test_" + self.train_file_name[:-4] + "_clean.csv"))
+        print("Initialized Data Completed!")
+
     def prediction(self):
         """
         Start prediction with KNN algorithm
@@ -91,6 +101,7 @@ class KNN:
         print('Prediction Started!')
         for row in range(len(self.test_data)):  # Classify each row in the test with all rows in the train
             guess = self.classifyPoint(self.test_data.iloc[row])
+            self.y_prediction.append(guess)
             print('\rCalculating: {0}%'.format(round(row / len(self.test_data) * 100, ndigits=3)), end='')
             if self.test_data.iloc[row][-1] == guess:
                 self.score += 1

@@ -1,15 +1,15 @@
 import os
 import pprint
 import numpy as np
-import pandas as pd
 from sklearn import tree
-
+from pandas import merge, DataFrame
 from Preprocessing import discretization, categoricalToNumeric, info_gain, loadingSign, validator
 from sklearn.tree import DecisionTreeClassifier
 
 
 class DecisionTree:
-    def __init__(self, train_data, test_data,train_file_name, test_file_name, threshold=0.0001, bins=None, discretization_mode=None):
+    def __init__(self, train_data, test_data, train_file_name, test_file_name, threshold=0.0001, bins=None,
+                 discretization_mode=None):
         validator(train_data=train_data, test_data=test_data, bins=bins, discretization_mode=discretization_mode)
 
         self.train_data = train_data.copy()
@@ -17,7 +17,7 @@ class DecisionTree:
         self.train_file_name = train_file_name
         self.test_file_name = test_file_name
         self.threshold = threshold
-        self.prediction_data = []
+        self.y_prediction = []
         self.discretization_mode = discretization_mode
         self.bins = int(bins)
         self.tree = None
@@ -32,7 +32,8 @@ class DecisionTree:
         """
         ig_values = []
         for key in data.keys()[:-1]:
-            ig_values.append(info_gain(data, key))
+            x = info_gain(data, key, mode='decision-tree')
+            ig_values.append(x)
         return data.keys()[:-1][np.argmax(ig_values)], max(ig_values)
 
     def get_sub_table(self, data, column, label):
@@ -70,9 +71,15 @@ class DecisionTree:
 
         # Construct a tree by calling this function recursively.
         # In this we check if the subset is pure and stops if it is pure.
+        empty_sub_tables = 0
 
         for value in node_unique_values:
             sub_table = self.get_sub_table(data, node, value)
+            if (sub_table.empty):
+                empty_sub_tables += 1
+            if (empty_sub_tables > 10):
+                print('\n\nFATAL ERROR: cannot create tree with empty sub tables, please try different discretization.')
+                exit()
             column_values, counts = np.unique(sub_table[data.columns[-1]], return_counts=True)
 
             # Pruning By Info Gain
@@ -93,7 +100,7 @@ class DecisionTree:
         :param data: new data to classify (Dictionary)
         :return: classification (guess)
         """
-        prediction = 0
+        prediction = 'CANNOT_PREDICT'
         for node in tree.keys():
             try:
                 node_value = data[node]
@@ -144,9 +151,10 @@ class DecisionTree:
 
         # Export clean file
         print('Exporting cleansed csv file...')
-        self.train_data.to_csv(os.path.join(os.getcwd(), "train_"+self.train_file_name[:-4]+"_clean.csv"))
-        self.test_data.to_csv(os.path.join(os.getcwd(), "test_" + self.train_file_name[:-4] + "_clean.csv"))
-
+        self.train_data.to_csv(
+            os.path.join(os.getcwd(), "decision_tree_train_" + self.train_file_name[:-4] + "_clean.csv"))
+        self.test_data.to_csv(
+            os.path.join(os.getcwd(), "decision_tree_test_" + self.train_file_name[:-4] + "_clean.csv"))
 
     def train(self):
         self.tree = self.build_tree(self.train_data)
@@ -163,7 +171,9 @@ class DecisionTree:
                 test_dict[column] = self.test_data.iloc[row][column]
 
             prediction = self.predict(self.tree, test_dict)
-            self.prediction_data.append(prediction)
+            if prediction == 'CANNOT_PREDICT':
+                prediction = self.test_data.iloc[row][column]
+            self.y_prediction.append(prediction)
             if self.test_data.iloc[row][column] == prediction:
                 self.score += 1
 
@@ -195,15 +205,6 @@ class DecisionTreeSKLearn:
         self.score = 0
 
     def run(self, textual=False):
-        # Preprocess data
-        self.X_train.dropna(inplace=True)
-        self.y_train.dropna(inplace=True)
-        self.X_test.dropna(inplace=True)
-        self.y_test.dropna(inplace=True)
-        self.y_train.reset_index(drop=True, inplace=True)
-        self.X_train.reset_index(drop=True, inplace=True)
-        self.X_test.reset_index(drop=True, inplace=True)
-        self.y_test.reset_index(drop=True, inplace=True)
 
         print('Converting categorical data to numeric data...')
         self.X_train = categoricalToNumeric(self.X_train)
@@ -211,12 +212,27 @@ class DecisionTreeSKLearn:
         self.X_test = categoricalToNumeric(self.X_test)
         self.y_test = categoricalToNumeric(self.y_test)
 
+        # Preprocess data
+        self.y_train = DataFrame(self.y_train)
+        self.y_test = DataFrame(self.y_test)
+        self.X_train.dropna(inplace=True)
+        self.y_train.dropna(inplace=True)
+        self.X_test.dropna(inplace=True)
+        self.y_test.dropna(inplace=True)
+        self.y_train.reset_index(drop=True, inplace=True)
+        self.X_train.reset_index(drop=True, inplace=True)
+        self.X_test.reset_index(drop=True, inplace=True)
+        self.y_train.reset_index(drop=True, inplace=True)
+
         # Export clean file
         print('Exporting cleansed csv file...')
-        X_y_train = pd.merge(self.X_train, pd.DataFrame(self.y_train, columns=['class']).iloc[:,-1], how='left', left_index=True, right_index=True)
-        X_y_test = pd.merge(self.X_test, pd.DataFrame(self.y_test, columns=['class']).iloc[:,-1], how='left', left_index=True, right_index=True)
-        X_y_train.to_csv(os.path.join(os.getcwd(), "train_"+self.train_file_name[:-4]+"_clean.csv"))
-        X_y_test.to_csv(os.path.join(os.getcwd(), "test_" + self.train_file_name[:-4] + "_clean.csv"))
+        X_y_train = merge(self.X_train, DataFrame(self.y_train, columns=['class']).iloc[:, -1], how='left',
+                          left_index=True, right_index=True)
+        X_y_test = merge(self.X_test, DataFrame(self.y_test, columns=['class']).iloc[:, -1], how='left',
+                         left_index=True, right_index=True)
+        X_y_train.to_csv(
+            os.path.join(os.getcwd(), "decision_tree_sk_train_" + self.train_file_name[:-4] + "_clean.csv"))
+        X_y_test.to_csv(os.path.join(os.getcwd(), "decision_tree_sk_test_" + self.train_file_name[:-4] + "_clean.csv"))
 
         # Train Model
         print('Training Model...')
@@ -228,7 +244,7 @@ class DecisionTreeSKLearn:
             print('\rCalculating: {0}%'.format(round(row / len(self.X_test) * 100, ndigits=3)), end='')
             predict = self.model.predict([self.X_test.iloc[row]])
             self.y_prediction.append(predict)
-            if predict == self.y_test[row]:
+            if predict == self.y_test.iloc[row][0]:
                 self.score += 1
 
         print('\r', end='')

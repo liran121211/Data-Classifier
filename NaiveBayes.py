@@ -1,16 +1,19 @@
 import os
 
+from pandas import merge, DataFrame
 from Preprocessing import discretization, categoricalToNumeric, count_conditional_att, count_att, validator
 from sklearn.naive_bayes import GaussianNB
 
 
 class NaiveBayes:
-    def __init__(self, train_file, test_file, bins=None, discretization_mode=None):
+    def __init__(self, train_file, test_file, train_file_name, test_file_name, bins=None, discretization_mode=None):
         validator(train_data=train_file, test_data=test_file, bins=bins, discretization_mode=discretization_mode)
 
         self.X_y_train = train_file.copy()
         self.X_y_test = test_file.copy()
-        self.y_train_col_name = train_file.iloc[:, -1].name
+        self.train_file_name = train_file_name
+        self.test_file_name = test_file_name
+        self.class_name = train_file.iloc[:, -1].name
         self.class_probabilities = []
         self.X_train_col_names = []
         self.y_prediction = []
@@ -49,17 +52,22 @@ class NaiveBayes:
         print("Initializing and Discretizing Data...")
         if self.bins is None or self.bins != 0:
             for column in self.X_y_train:
-                if not isinstance(self.X_y_train[column][1], str) and column != self.y_train_col_name:
-                    discretization(dataset=self.X_y_train, column=column, bins=self.bins,mode=self.discretization_mode)
+                if not isinstance(self.X_y_train[column][1], str):
+                    discretization(dataset=self.X_y_train, column=column, bins=self.bins, mode=self.discretization_mode)
 
             for column in self.X_y_test:
-                if not isinstance(self.X_y_test[column][1], str) and column != self.y_train_col_name:
-                    discretization(dataset=self.X_y_test, column=column, bins=self.bins,mode=self.discretization_mode)
+                if not isinstance(self.X_y_test[column][1], str):
+                    discretization(dataset=self.X_y_test, column=column, bins=self.bins, mode=self.discretization_mode)
             print("Discretization Completed!")
 
         for column in self.X_y_train:
             self.probabilities[column] = self.X_y_train[column].unique()
 
+        # Export clean file
+        print('Exporting cleansed csv file...')
+        self.X_y_train.to_csv(
+            os.path.join(os.getcwd(), "naive_bayes_train_" + self.train_file_name[:-4] + "_clean.csv"))
+        self.X_y_test.to_csv(os.path.join(os.getcwd(), "naive_bayes_test_" + self.train_file_name[:-4] + "_clean.csv"))
         print("Initialized Data Completed!")
 
     def train(self):
@@ -78,14 +86,14 @@ class NaiveBayes:
             print('\rCalculating: {0}%'.format(round(i / len(self.probabilities.items()) * 100, ndigits=3)), end='')
 
             for value in array:
-                if column.lower() != self.y_train_col_name:  # if (column) is not last classification column
+                if column != self.class_name:  # if (column) is not last classification column
                     no_dict[(column, value)] = count_conditional_att(self.X_y_train, column, value,
-                                                                     self.y_train_col_name,
-                                                                     self.X_train_col_names[0])
+                                                                     self.class_name,
+                                                                     self.X_train_col_names[0],mode='naive-bayes')
 
                     yes_dict[(column, value)] = count_conditional_att(self.X_y_train, column, value,
-                                                                      self.y_train_col_name,
-                                                                      self.X_train_col_names[1])
+                                                                      self.class_name,
+                                                                      self.X_train_col_names[1],mode='naive-bayes')
             i += 1
         print('\r', end='')
         self.class_probabilities.append(no_dict)
@@ -101,21 +109,21 @@ class NaiveBayes:
         """
         prod_prob_y = 1
         prod_prob_n = 1
-        for column in self.X_y_train:
-            if column != self.y_train_col_name:
+        for column in self.X_y_test:
+            if column != self.class_name:
                 try:
-                    prod_prob_y *= yes_dict[(column, self.X_y_train[column][row])]
+                    prod_prob_y *= yes_dict[(column, self.X_y_test[column][row])]
                 except KeyError:
                     prod_prob_y *= 1
                 try:
-                    prod_prob_n *= no_dict[(column, self.X_y_train[column][row])]
+                    prod_prob_n *= no_dict[(column, self.X_y_test[column][row])]
                 except KeyError:
                     prod_prob_n *= 1
 
-        p_class_n = count_att(self.X_y_train, self.y_train_col_name, self.X_train_col_names[0])
-        p_class_y = count_att(self.X_y_train, self.y_train_col_name, self.X_train_col_names[1])
+        p_class_n = count_att(self.X_y_test, self.class_name, self.X_train_col_names[0])
+        p_class_y = count_att(self.X_y_test, self.class_name, self.X_train_col_names[1])
 
-        if prod_prob_y * p_class_y > prod_prob_n * p_class_n:
+        if (prod_prob_y * p_class_y > prod_prob_n * p_class_n):
             return self.X_train_col_names[1]
         else:
             return self.X_train_col_names[0]
@@ -148,18 +156,28 @@ class NaiveBayes:
 
 
 class NaiveBayes_SKLearn:
-    def __init__(self, train_file, test_file):
+    def __init__(self, train_file, test_file, train_file_name, test_file_name):
         validator(train_data=train_file, test_data=test_file)
         self.model = GaussianNB()
         self.y_train = train_file.iloc[:, -1].copy()
         self.X_train = train_file.drop(columns=[train_file.iloc[:, -1].name], axis=0).copy()
         self.y_test = test_file.iloc[:, -1].copy()
         self.X_test = test_file.drop(columns=[test_file.iloc[:, -1].name], axis=0).copy()
+        self.train_file_name = train_file_name
+        self.test_file_name = test_file_name
         self.y_prediction = []
         self.score = 0
 
     def run(self):
         # Preprocess data
+        print('Converting categorical data to numeric data...')
+        self.X_train = categoricalToNumeric(self.X_train)
+        self.y_train = categoricalToNumeric(self.y_train)
+        self.X_test = categoricalToNumeric(self.X_test)
+        self.y_test = categoricalToNumeric(self.y_test)
+
+        self.y_train = DataFrame(self.y_train)
+        self.y_test = DataFrame(self.y_test)
         self.X_train.dropna(inplace=True)
         self.y_train.dropna(inplace=True)
         self.X_test.dropna(inplace=True)
@@ -167,25 +185,29 @@ class NaiveBayes_SKLearn:
         self.y_train.reset_index(drop=True, inplace=True)
         self.X_train.reset_index(drop=True, inplace=True)
         self.X_test.reset_index(drop=True, inplace=True)
-        self.y_test.reset_index(drop=True, inplace=True)
+        self.y_train.reset_index(drop=True, inplace=True)
 
-        print('Converting categorical data to numeric data...')
-        self.X_train = categoricalToNumeric(self.X_train)
-        self.y_train = categoricalToNumeric(self.y_train)
-        self.X_test = categoricalToNumeric(self.X_test)
-        self.y_test = categoricalToNumeric(self.y_test)
+        # Export clean file
+        print('Exporting cleansed csv file...')
+        X_y_train = merge(self.X_train, DataFrame(self.y_train, columns=['class']).iloc[:, -1], how='left',
+                          left_index=True, right_index=True)
+        X_y_test = merge(self.X_test, DataFrame(self.y_test, columns=['class']).iloc[:, -1], how='left',
+                         left_index=True, right_index=True)
+        X_y_train.to_csv(
+            os.path.join(os.getcwd(), "decision_tree_sk_train_" + self.train_file_name[:-4] + "_clean.csv"))
+        X_y_test.to_csv(os.path.join(os.getcwd(), "decision_tree_sk_test_" + self.train_file_name[:-4] + "_clean.csv"))
 
         # Train Model
         print('Training Model...')
-        self.model.fit(self.X_train, self.y_train)
+        self.model.fit(self.X_train, self.y_train.iloc[:, -1])
 
         # Test Model
         print('Testing Model...')
         for row in range(len(self.X_test)):
             print('\rCalculating: {0}%'.format(round(row / len(self.X_test) * 100, ndigits=3)), end='')
             prediction = self.model.predict([self.X_test.iloc[row]])
-            self.y_prediction.append(prediction)
-            if prediction == self.y_test[row]:
+            self.y_prediction.append(prediction[0])
+            if prediction == self.y_test.iloc[row][0]:
                 self.score += 1
 
         print('\r', end='')

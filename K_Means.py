@@ -1,6 +1,6 @@
 import numpy as np
 from Preprocessing import categoricalToNumeric, validator
-
+from sklearn.preprocessing import StandardScaler
 
 class KMeans:
     def __init__(self, train_data, k_means=5, max_iterations=100, random_state=30):
@@ -142,12 +142,13 @@ class KMeans:
             train = self.dataset[columns_]
 
         # Scale dataset with zScore method
-        for col in self.dataset:
-            self.dataset[col] = (self.dataset[col] - self.dataset[col].mean()) / self.dataset[col].std(ddof=0)
+        zScore = StandardScaler()
+        self.dataset = zScore.fit_transform(self.dataset)
 
         # Save processed data to object
         self.train = train.to_numpy()
         self.class_ = class_col
+
 
     def test(self):
         """

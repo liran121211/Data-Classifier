@@ -1,7 +1,7 @@
 from collections import Counter
 from sklearn import preprocessing
 from math import log
-from numpy import ravel
+from numpy import ravel, ndarray
 import pandas as pd
 import entropy_based_binning as entropy_binning
 
@@ -124,13 +124,19 @@ def categoricalToNumeric(dataset):
         dataset = ravel(dataset)
         pp.fit(dataset)
         return pp.transform(dataset) # returns list object
-    else:
-        for column in dataset:
-            if type(column[1]) is str:
-                pp.fit(dataset[column])
-                dataset[column] = pp.transform(dataset[column])
-        return dataset
 
+    elif isinstance(dataset, pd.DataFrame):
+        if len(dataset.columns) > 1:
+            for column in dataset:
+                if type(column[1]) is str:
+                    pp.fit(dataset[column])
+                    dataset[column] = pp.transform(dataset[column])
+        else:
+            if type(dataset.iloc[1]) is str:
+                pp.fit(dataset)
+                dataset = pp.transform(dataset)
+        return dataset
+    return dataset
 
 def discretization(dataset, column, bins, mode):
     """
@@ -142,28 +148,17 @@ def discretization(dataset, column, bins, mode):
     """
     if mode == 'equal-width':
         try:
-            column_len = len(dataset[column].unique())
-            if bins >= column_len:
-                bins = column_len
-                print('WARNING: Bins value is equal or greater than unique values in [{0}] column, Bins changed to {1}.'.format(column, column_len))
-                dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(64 + bins)))])
+            dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(64+bins)))])
         except ValueError:
-            dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(64 + bins)))], duplicates='drop')
+            dataset[column] = pd.qcut(x=dataset[column], q=bins, duplicates='drop')
 
     elif mode == 'equal-frequency':
-        column_len = len(dataset[column].unique())
-        if bins >= column_len:
-            bins = column_len
-            print('WARNING: Bins value is equal or greater than unique values in [{0}] column, Bins changed to {1}.'
-                  .format(column, column_len))
-        dataset[column] = pd.cut(x=dataset[column], bins=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(64 + bins)))])
+        try:
+            dataset[column] = pd.cut(x=dataset[column], bins=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(64+bins)))])
+        except ValueError:
+            dataset[column] = pd.cut(x=dataset[column], bins=bins, duplicates='drop')
 
     elif mode == 'entropy':
-        column_len = len(dataset[column].unique())
-        if bins >= column_len:
-            bins = column_len
-            print('WARNING: Bins value is equal or greater than unique values in [{0}] column, Bins changed to {1}.'
-                  .format(column, column_len))
         dataset[column] = categoricalToNumeric(dataset[column])
         dataset[column] = entropy_binning.bin_sequence(dataset[column], nbins=bins)
     else:
@@ -187,7 +182,7 @@ def count_att(data, column, value):
         return 1 / (dataset_len + len(data[column].value_counts()))
 
 
-def count_conditional_att(data, features_, f_label, class_, c_label=None):
+def count_conditional_att(data, features_, f_label, class_, c_label=None, mode = None):
     """
     :param data: Pandas DataFrame
     :param features_: First selected column
@@ -198,25 +193,37 @@ def count_conditional_att(data, features_, f_label, class_, c_label=None):
     P(A|B)=P(B|A)P(A)/P(B)
     P(class|features)=P(features|class) * P(class) / P(features)
     """
+    p = None
+
     if c_label is not None:
         try:  # if (f_label) not been found then return 1 to preserve the probability
-            p = pd.crosstab(data[class_], data[features_], normalize='columns')[f_label][c_label]
-            if p == 0:
+            if mode == 'naive-bayes':
+                p = pd.crosstab(data[features_], data[class_], normalize='columns')[c_label][f_label]
+            if mode == 'decision-tree':
+                p = pd.crosstab(data[class_], data[features_], normalize='columns')[f_label][c_label]
+            if (p == 0):
                 p = 1
             return p
         except KeyError:
             return 1
     else:
         try:  # if (f_label) not been found then return 1 to preserve the probability
-            p = pd.crosstab(data[features_], class_, normalize='columns').transpose()[f_label][0]
-            if p == 0:
-                p = 1
-            return p
+            if mode == 'naive-bayes':
+                p = pd.crosstab(data[features_], data[class_], normalize='columns').transpose()[f_label]
+                count_p = 0
+                for i in range(len(p)): # count all classification column probabilities
+                    count_p += p[i]
+                return count_p
+            if mode == 'decision-tree':
+                p = pd.crosstab(data[features_], class_, normalize='columns').transpose()[f_label][0]
+                if p == 0:
+                    p = 1
+                return p
         except KeyError:
             return 1
 
 
-def conditional_entropy(data, features_, f_label, class_, l_base=2):
+def conditional_entropy(data, features_, f_label, class_, l_base=2, mode = None):
     """
     Calculate the conditional entropy (Y/X)= −∑p(x,y) · log(p(y/x))
     :param data: dataset of DataFrame
@@ -230,7 +237,7 @@ def conditional_entropy(data, features_, f_label, class_, l_base=2):
     column_labels = data[class_].unique()  # extract unique attributes to list
     for c_label in column_labels:
         # each column has attribute (this will calculate each att probability)
-        probabilities.append(count_conditional_att(data, features_, f_label, class_, c_label))
+        probabilities.append(count_conditional_att(data, features_, f_label, class_, c_label,mode=mode))
 
     return -sum([x * log(x, l_base) for x in probabilities])  # final conditional entropy calc
 
@@ -252,7 +259,7 @@ def basic_entropy(data, features_, l_base=2):
     return -sum([x * log(x, l_base) for x in probabilities])  # final entropy calc
 
 
-def info_gain(data, column, l_base=2):
+def info_gain(data, column, l_base=2, mode = None):
     """
     Calculate the information gain given data and specific column
     :param data: dataset of DataFrame
@@ -260,13 +267,13 @@ def info_gain(data, column, l_base=2):
     :param l_base: log base (default: 2)
     :return: calculated information gain
     """
-    class_ = data[data.columns[-1]].name  # last column of the DataFrame
+    class_ = data.iloc[:,-1].name  # last column of the DataFrame
     unique_values = data[column].unique()
     sum_gain = basic_entropy(data, class_)
     for feature_ in unique_values:
         sum_gain += -(
-                count_conditional_att(data, column, feature_, class_) *
-                conditional_entropy(data, column, feature_, class_, l_base))
+                count_conditional_att(data, column, feature_, class_, mode=mode) *
+                conditional_entropy(data, column, feature_, class_, l_base,mode=mode))
     return sum_gain
 
 
