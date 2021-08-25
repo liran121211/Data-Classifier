@@ -1,7 +1,7 @@
 from math import sqrt
 import pandas as pd
-
 from Preprocessing import categoricalToNumeric
+
 
 class KNN():
     def __init__(self, k_neighbors):
@@ -23,7 +23,7 @@ class KNN():
             distance += (row1[i] - row2[i]) ** 2
         return sqrt(distance)
 
-    def get_neighbors(self, train_dataset, test_row, k_neighbors):
+    def getNeighbors(self, train_dataset, test_row, k_neighbors):
         """
         Calculates the k nearest neighbors
         :param train_dataset: tran dataset
@@ -95,6 +95,7 @@ def run():
     knn = KNN(k_neighbors=5)
     knn.loadData(train, test)
     knn.prediction()
+
 
 # Star Model
 run()

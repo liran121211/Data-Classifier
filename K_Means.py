@@ -1,17 +1,6 @@
 import numpy as np
 import pandas as pd
-
 from Preprocessing import categoricalToNumeric
-
-
-def pointsDistance(p1, p2):
-    """
-    Calculate distance between 2 points.
-    :param p1: first point
-    :param p2: second point
-    :return: distance between 2 points
-    """
-    return np.sqrt(np.sum((p1 - p2) ** 2))
 
 
 class KMeans:
@@ -28,6 +17,15 @@ class KMeans:
         self.centroids = []  # array of centroids
 
         np.random.seed(random_state)  # random for initial points.
+
+    def pointsDistance(self, p1, p2):
+        """
+        Calculate distance between 2 points.
+        :param p1: first point
+        :param p2: second point
+        :return: distance between 2 points
+        """
+        return np.sqrt(np.sum((p1 - p2) ** 2))
 
     def prediction(self, dataset):
         """
@@ -91,7 +89,7 @@ class KMeans:
         :return: return the index of the closest centroid to the point.
         """
         # distance of the current sample to each centroid
-        distances = [pointsDistance(point, centroid) for centroid in
+        distances = [self.pointsDistance(point, centroid) for centroid in
                      centroids]  # find the closest point from the centroid for each point
         closest_index = np.argmin(distances)  # get the most minimal index of the centroids from (distances)
         return closest_index
@@ -117,7 +115,7 @@ class KMeans:
         :return: true if the same coordinates, false if not .
         """
         # calculate the distances between old and new centroids
-        distances = [pointsDistance(centroids_old[j], centroids[j]) for j in range(self.k)]
+        distances = [self.pointsDistance(centroids_old[j], centroids[j]) for j in range(self.k)]
         return sum(distances) == 0
 
     def loadData(self, file, columns_=None):

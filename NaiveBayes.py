@@ -1,6 +1,8 @@
-from math import log
-from Preprocessing import discretization
 import pandas as pd
+
+from Evaluator import confusionMatrix
+from Preprocessing import discretization, categoricalToNumeric, count_conditional_att, count_att
+from sklearn.naive_bayes import GaussianNB
 
 
 class NaiveBayes:
@@ -12,69 +14,7 @@ class NaiveBayes:
         self.probabilities = {}
         self.class_probabilities = []
         self.score = 0
-
-    def count_att(self, data, column, value):
-        """
-        :param data: Pandas DataFrame
-        :param column: specific column in the dataset
-        :param value: which value in the column should be counted
-        :return: probability of (value) to show in (column), included Laplacian correction
-        """
-        dataset_len = len(data)
-        try:  # if (value) not been found then return laplacian calculation to preserve the probability
-            p = data[column].value_counts()[value] / dataset_len
-            if p == 0:
-                p = 1 / (dataset_len + len(data[column].value_counts()))
-            return p
-        except KeyError:
-            return 1 / (dataset_len + len(data[column].value_counts()))
-
-    def count_conditional_att(self, data, features_, f_label, class_, c_label=None):
-        """
-        :param data: Pandas DataFrame
-        :param features_: First selected column
-        :param f_label: Second selected column
-        :param class_: Independent value of column1
-        :param c_label: Dependent value of column2
-        :return: conditional probability of Y when X already occurred.
-        P(A|B)=P(B|A)P(A)/P(B)
-        P(class|features)=P(features|class) * P(class) / P(features)
-        """
-        if c_label is not None:
-            try:  # if (f_label) not been found then return 1 to preserve the probability
-                p = pd.crosstab(data[class_], data[features_], normalize='columns')[f_label][c_label]
-                if p == 0:
-                    p = 1
-                return p
-            except KeyError:
-                return 1
-        else:
-            try:  # if (f_label) not been found then return 1 to preserve the probability
-                p = pd.crosstab(data[features_], class_, normalize='columns').transpose()[f_label][0]
-                if p == 0:
-                    p = 1
-                return p
-            except KeyError:
-                return 1
-
-    def conditional_entropy(self, data, features_, f_label, class_, l_base=2):
-        """
-        Calculate the conditional entropy (Y/X)= −∑p(x,y) · log(p(y/x))
-        :param data: dataset of DataFrame
-        :param features_: column in the dataset
-        :param f_label: attribute (label) in the features_ column
-        :param class_: (class) which represent the classification column
-        :param l_base: which log the entropy will be calculated
-        :return: conditional entropy calculation
-        """
-        probabilities = []  # Probabilities list
-        column_labels = data[class_].unique()  # extract unique attributes to list
-        for c_label in column_labels:
-            probabilities.append(
-                self.count_conditional_att(data, features_, f_label, class_,
-                                           c_label))  # each column has attribute (this will calculate each att probability)
-
-        return -sum([x * log(x, l_base) for x in probabilities])  # final conditional entropy calc
+        self.prediction_column = []
 
     def loadData(self, train_file, test_file):
         """
@@ -94,12 +34,12 @@ class NaiveBayes:
 
         print("Initializing and Discretizing Data...")
         for column in self.train_dataset:
-            if not isinstance(self.train_dataset[column][1], str):
+            if not isinstance(self.train_dataset[column][1], str) and column != self.class_col_name:
                 discretization(self.train_dataset, column, 5, "equal-frequency",
                                [chr(i) for i in range(ord('A'), ord('E') + 1)])
 
         for column in self.test_dataset:
-            if not isinstance(self.test_dataset[column][1], str):
+            if not isinstance(self.test_dataset[column][1], str) and column != self.class_col_name:
                 discretization(self.test_dataset, column, 5, "equal-frequency",
                                [chr(i) for i in range(ord('A'), ord('E') + 1)])
         print("Discretization Completed!")
@@ -123,9 +63,9 @@ class NaiveBayes:
         for column, array in self.probabilities.items():
             for value in array:
                 if column.lower() != self.class_col_name:  # if (column) is not last classification column
-                    no_dict[(column, value)] = self.count_conditional_att(self.train_dataset, column, value,
+                    no_dict[(column, value)] = count_conditional_att(self.train_dataset, column, value,
                                                                           self.class_col_name, self.class_uniques[0])
-                    yes_dict[(column, value)] = self.count_conditional_att(self.train_dataset, column, value,
+                    yes_dict[(column, value)] = count_conditional_att(self.train_dataset, column, value,
                                                                            self.class_col_name, self.class_uniques[1])
 
         self.class_probabilities.append(no_dict)
@@ -153,8 +93,8 @@ class NaiveBayes:
                 except KeyError:
                     prod_prob_n *= 1
 
-        p_class_n = self.count_att(self.train_dataset, self.class_col_name, self.class_uniques[0])
-        p_class_y = self.count_att(self.train_dataset, self.class_col_name, self.class_uniques[1])
+        p_class_n = count_att(self.train_dataset, self.class_col_name, self.class_uniques[0])
+        p_class_y = count_att(self.train_dataset, self.class_col_name, self.class_uniques[1])
 
         if prod_prob_y * p_class_y > prod_prob_n * p_class_n:
             return self.class_uniques[1]
@@ -172,25 +112,68 @@ class NaiveBayes:
         count_correct = 0
         for row in range(len(self.test_dataset)):
             answer = self.naive_bayes_classifier(yes_dict=y_dict, no_dict=n_dict, row=row)
+            self.prediction_column.append(answer)
             real_answer = (self.test_dataset.iloc[row][-1])
             if answer == real_answer:
                 count_correct += 1
 
         self.score = count_correct
         print('Testing Completed!')
-        print("Total correct was: {0}/{1} | %{2}".format(self.score, len(self.test_dataset),round((self.score / len(self.test_dataset)) * 100,ndigits=3)))
+        print("Total correct was: {0}/{1} | %{2}".format(self.score, len(self.test_dataset),
+                                                         round((self.score / len(self.test_dataset)) * 100, ndigits=3)))
 
-def run():
+
+def run(train_data, test_data):
     # Load Information
-    train = pd.read_csv('train.csv', delimiter=',')
-    test = pd.read_csv('test.csv', delimiter=',')
-
     naive_bayes = NaiveBayes()
-    naive_bayes.loadData(train, test)
+    naive_bayes.loadData(train_data, test_data)
     naive_bayes.train()
     naive_bayes.test(naive_bayes.class_probabilities[1], naive_bayes.class_probabilities[0])
+    print(confusionMatrix(test[test.columns[-1]], naive_bayes.prediction_column))
 
+
+class NaiveBayes_SKLearn:
+    def __init__(self, train_data, test_data):
+        self.train_dataset = train_data
+        self.test_dataset = test_data
+        self.train_class_col = self.train_dataset[self.train_dataset.columns[-1]]
+        self.test_class_col = self.test_dataset[self.test_dataset.columns[-1]]
+        self.model = GaussianNB()
+        self.score = 0
+        self.prediction_column = []
+
+    def run(self):
+        success_guess = 0
+
+        # Preprocess data
+        categoricalToNumeric(self.train_dataset)
+        categoricalToNumeric(self.test_dataset)
+        self.train_dataset = self.train_dataset.drop(columns=[self.train_class_col.name], axis=0)
+        self.test_dataset = self.test_dataset.drop(columns=[self.test_class_col.name], axis=0)
+
+        # Train Model
+        print('Training Model...')
+        self.model.fit(self.train_dataset, self.train_class_col)
+
+        # Test Model
+        print('Testing Model...')
+        for row in range(len(self.test_dataset)):
+            prediction = self.model.predict([self.test_dataset.iloc[row]])
+            self.prediction_column.append(prediction)
+            if prediction == self.train_class_col.iloc[row]:
+                success_guess += 1
+
+        print("Total correct was: {0}/{1} | %{2}".format(success_guess, len(test),
+                                                         round((success_guess / len(test)) * 100, ndigits=3)))
 
 
 # Start Model
-run()
+train = pd.read_csv('train.csv', delimiter=',')
+test = pd.read_csv('test.csv', delimiter=',')
+#
+# nb_sklearn = NaiveBayes_SKLearn(train, test)
+# nb_sklearn.run()
+#
+run(train, test)
+
+

@@ -1,4 +1,7 @@
 # from matplotlib import pyplot as plt
+from collections import Counter
+from math import log
+
 import numpy as np
 from sklearn import preprocessing as pp, preprocessing
 import pandas as pd
@@ -84,109 +87,6 @@ def equalWidth(dataset, n_bins=2):
 
     return fixed_width_bins
 
-
-# Use pandas Cut function to create Equal-Width Binning
-def pandasEqualWidth(dataset, n_bins=2, labels=['Label #1', 'Label #2']):
-    return pd.cut(dataset, bins=n_bins, labels=labels)
-
-
-# Use pandas Cut function to create Equal-Frequency Binning
-def pandasEqualFrequency(dataset, quantity=2, labels=['Label #1', 'Label #2', 'Label #3']):
-    return pd.qcut(dataset, q=quantity, labels=labels)
-
-
-data2 = [5, 10, 11, 13, 15, 35, 50, 55, 72, 92, 204, 215]
-x = equalWidth(data2, n_bins=3)
-
-
-# -------------------------------------------------------------------------------------------
-
-# SMA Algorithm
-def simpleMovingAverage(dataset, window=2):
-    sum_dataset = [0]
-    final = []
-
-    for index, value in enumerate(dataset, start=1):
-        sum_dataset.append(sum_dataset[index - 1] + value)
-        if index >= window:  # Calculate averge of (window) items only if index in array reached (window) items
-            calc_average = (sum_dataset[index] - sum_dataset[index - window]) / window
-            final.append(calc_average)  # add average value to new list
-
-    return final
-
-
-# WMA Algorithm
-def weighedMovingAverage(dataset, weights, window=2):
-    DATA = dataset  # Keep original data untouched
-    WEIGHTS = weights  # Keep original weights data untouched
-    slices = []  # each slice contain value * weight in size of window
-    final = []  # all weighted averages will be stored here
-    for i in range(len(DATA)):  # Iterate thorugh all dataset values
-        if window <= len(DATA):  # check if slice length is not bigger than array length
-            for j in range(window):  # Iterate thorugh values in the window frame length
-                slices.append(DATA[j] * WEIGHTS[j])  # Product of data value with weight value
-            final.append(sum(slices) / sum(WEIGHTS))  # add final mean of (window) frame length
-            DATA.pop(0)  # pop first value
-            slices = []  # Clear array for next window slice
-
-    return final
-
-
-# EMA Algorithm
-def exponentialMovingAverage(dataset, window=2):
-    DATA = dataset
-    final = []
-
-    simpleAverage = sum(DATA[:window]) / window  # Calculate (window) values by SMA method
-    alpha = float(2 / (1 + window))  # Smoothing (pre-definded function)
-    final.append(round(simpleAverage, 3))
-
-    # EMA(today) = ( (Price(today) - EMA(yesterday) ) x alpha ) + EMA(yesterday)
-    final.append(round(((DATA[window] - simpleAverage) * alpha) + simpleAverage, 3))
-
-    # Calculate the rest of EMA values
-    counter = 1
-    for i in DATA[window + 1:]:
-        calc = ((i - final[counter]) * alpha) + final[counter]
-        counter += 1
-        final.append(round(calc, 3))
-
-    return final
-
-
-# Use pandas to calculate Simple Moving Average
-def pandaSMA(dataset, window=2):
-    return pd.DataFrame(dataset).rolling(window).mean()
-
-
-# Use pandas to calculate Weighted Moving Average
-def pandaWMA(dataset, weights, window=2):
-    weights = np.array(weights)
-    return pd.DataFrame(dataset).rolling(window).apply(lambda prices: np.dot(prices, weights) / weights.sum(), raw=True)
-
-
-# Use pandas to calculate Exponential Moving Average
-def pandaEMA(dataset, window=2):
-    DATA = pd.DataFrame(dataset)
-    final = DATA
-    calc_sma = DATA.rolling(window).mean()
-    final.iloc[0:window] = calc_sma[0:window]
-    return np.round(pd.DataFrame(final).ewm(span=window, adjust=False).mean(), decimals=3)
-
-
-data_ma = [22.273, 22.194, 22.085, 22.174, 22.184, 22.134, 22.234, 22.432, 22.244, 22.293, 22.154, 22.393, 22.382,
-           22.611,
-           23.356, 24.052, 23.753, 23.832, 23.952, 23.634, 23.823, 23.872, 23.654, 23.187, 23.098, 23.326, 22.681,
-           23.098,
-           22.403, 22.173]
-# weights = [x for x in range(10)]
-# print(exponentialMovingAverage(data_ma, 5))
-# print(pandaEMA(data_ma, 5))
-#
-# # data to be binned
-# data2 = [5, 10, 11, 13, 15, 35, 50, 55, 72, 92, 204, 215]
-
-
 # Smoothing By Bin Means
 def binMeans(dataset, interval=2):
     sort_data = sorted(equalFrequency(dataset, interval))  # sort data from low to high
@@ -223,29 +123,166 @@ def categoricalToNumeric(dataset):
     :param dataset: dataframe (Pandas).
     :return: Numeric dataset.
     """
-    print('Converting categorical data to numeric data...')
     pp = preprocessing.LabelEncoder()
-    for column in dataset:
-        if type(column[1]) is str:
-            pp.fit(dataset[column])
-            dataset[column] = pp.transform(dataset[column])
+    print('Converting categorical data to numeric data...')
+    if (isinstance(dataset, list)):
+        dataset = np.ravel(dataset)
+        pp.fit(dataset)
+        return pp.transform(dataset)
+    else:
+        for column in dataset:
+            if type(column[1]) is str:
+                pp.fit(dataset[column])
+                dataset[column] = pp.transform(dataset[column])
     print('All data successfully converted!')
 
 
-def discretization(dataset, column, bins, mode, labels=None):
+def discretization(dataset, column, bins, mode, max_bins = None,  labels=None):
     """
+    :param max_bins: New bins range for entropy binning
     :param dataset: Pandas DataFrame
-    :param column: specific column in the dataset
-    :param bins: amount of bins to separate the values in the columns
-    :param labels: rename the bins into specific name
-    :param mode: choose equal_width / equal frequency binning
-    :return: discretization on column
+    :param column: Specific column in the dataset
+    :param bins: Amount of bins to separate the values in the columns
+    :param labels: Rename the bins into specific name
+    :param mode: Choose equal_width / equal frequency binning
+    :return: Discretization on column
     """
     if mode == 'equal-width':
-        dataset[column] = pd.qcut(dataset[column], q=bins, labels=labels)
+        dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=labels)
 
-    if mode == 'equal-frequency':
-        dataset[column] = pd.cut(dataset[column], bins=bins, labels=labels)
+    elif mode == 'equal-frequency':
+        dataset[column] = pd.cut(x= dataset[column], bins=bins, labels=labels)
+
+    elif mode == 'entropy':
+        entropyDiscretization(dataset= dataset, column=column, bins_range= bins, max_bins= max_bins)
 
     else:
         raise NameError("Mode does not exist!")
+
+
+def count_att(data, column, value):
+    """
+    :param data: Pandas DataFrame
+    :param column: specific column in the dataset
+    :param value: which value in the column should be counted
+    :return: probability of (value) to show in (column), included Laplacian correction
+    """
+    dataset_len = len(data)
+    try:  # if (value) not been found then return laplacian calculation to preserve the probability
+        p = data[column].value_counts()[value] / dataset_len
+        if p == 0:
+            p = 1 / (dataset_len + len(data[column].value_counts()))
+        return p
+    except KeyError:
+        return 1 / (dataset_len + len(data[column].value_counts()))
+
+
+def count_conditional_att(data, features_, f_label, class_, c_label=None):
+    """
+    :param data: Pandas DataFrame
+    :param features_: First selected column
+    :param f_label: Second selected column
+    :param class_: Independent value of column1
+    :param c_label: Dependent value of column2
+    :return: conditional probability of Y when X already occurred.
+    P(A|B)=P(B|A)P(A)/P(B)
+    P(class|features)=P(features|class) * P(class) / P(features)
+    """
+    if c_label is not None:
+        try:  # if (f_label) not been found then return 1 to preserve the probability
+            p = pd.crosstab(data[class_], data[features_], normalize='columns')[f_label][c_label]
+            if p == 0:
+                p = 1
+            return p
+        except KeyError:
+            return 1
+    else:
+        try:  # if (f_label) not been found then return 1 to preserve the probability
+            p = pd.crosstab(data[features_], class_, normalize='columns').transpose()[f_label][0]
+            if p == 0:
+                p = 1
+            return p
+        except KeyError:
+            return 1
+
+
+def conditional_entropy(data, features_, f_label, class_, l_base=2):
+    """
+    Calculate the conditional entropy (Y/X)= −∑p(x,y) · log(p(y/x))
+    :param data: dataset of DataFrame
+    :param features_: column in the dataset
+    :param f_label: attribute (label) in the features_ column
+    :param class_: (class) which represent the classification column
+    :param l_base: which log the entropy will be calculated
+    :return: conditional entropy calculation
+    """
+    probabilities = []  # Probabilities list
+    column_labels = data[class_].unique()  # extract unique attributes to list
+    for c_label in column_labels:
+        # each column has attribute (this will calculate each att probability)
+        probabilities.append(count_conditional_att(data, features_, f_label, class_, c_label))
+
+    return -sum([x * log(x, l_base) for x in probabilities])  # final conditional entropy calc
+
+
+def basic_entropy(data, features_, l_base=2):
+    """
+    Calculate the entropy (X)= −∑p(x) · log(p(x))
+    :param data: dataset of DataFrame
+    :param features_: attribute in the column of the dataset
+    :param l_base: which log base, the entropy will be calculated with.
+    :return: basic entropy calculation
+    """
+    probabilities = []  # Probabilities list
+    column_labels = data[features_].unique()  # extract unique attributes to list
+    for f_label in column_labels:
+        probabilities.append(
+            count_att(data, features_, f_label))  # each column has attribute (this will calculate each att probability)
+
+    return -sum([x * log(x, l_base) for x in probabilities])  # final entropy calc
+
+
+def info_gain(data, column, l_base=2):
+    """
+    Calculate the information gain given data and specific column
+    :param data: dataset of DataFrame
+    :param column: column in the dataset
+    :param l_base: log base (default: 2)
+    :return: calculated information gain
+    """
+    class_ = data[data.columns[-1]].name  # last column of the DataFrame
+    unique_values = data[column].unique()
+    sum_gain = basic_entropy(data, class_)
+    for feature_ in unique_values:
+        sum_gain += -(
+                count_conditional_att(data, column, feature_, class_) *
+                conditional_entropy(data, column, feature_, class_, l_base))
+    return sum_gain
+
+def entropyDiscretization(dataset, column, bins_range, max_bins):
+    info_gain_dict = {}
+
+    # Preserve original dataset
+    temp_dataset = dataset.copy()
+
+    # Save classification column name [1: 0.47,3: 0.22,5: 0.90,7]
+    class_name = dataset[dataset.columns[-1]].name
+
+    # Split column into (bins) equal groups
+    cat, bins = pd.qcut(temp_dataset[column], q=bins_range, retbins=True, duplicates='drop')
+
+    # Iterate thorough each unique bin value in (bins array) and get new sub_table with values greater than bin value
+    for value in range(len(bins)):
+        subset = dataset[dataset[column] > bins[value]]
+        info_gain_dict[dataset[column].iloc[value]] = info_gain(subset, class_name)
+
+    # Finding bin group with the best info gain (up to max_bins groups)
+    new_bins = []
+    best_values = Counter(info_gain_dict).most_common(max_bins)
+    for bin in best_values:
+        new_bins.append(bin[0])
+    new_bins.sort()
+
+    # Binning the original array with best entropy values
+    dataset[column] = pd.cut(dataset[column], new_bins, labels=[chr(i) for i in range(ord('A'), ord(chr(65+len(new_bins)-1)))]).values.add_categories('other')
+    dataset[column] = dataset[column].fillna('other')
