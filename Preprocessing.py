@@ -288,3 +288,19 @@ def entropyDiscretization(dataset, column, bins_range, max_bins):
     dataset[column] = pd.cut(dataset[column], new_bins, labels=[chr(i) for i in range(
         ord('A'), ord(chr(65 + len(new_bins) - 1)))]).values.add_categories('other')
     dataset[column] = dataset[column].fillna('other')
+
+
+def loadingSign(state):
+    """
+    Loading sign for long process...
+    :param state: current character state
+    :return: next character state
+    """
+    if state == '|':
+        return '/'
+    elif state == '/':
+        return '——'
+    elif state == '——':
+        return "\\"
+    elif state == '\\':
+        return "|"

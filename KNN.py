@@ -1,13 +1,13 @@
 from math import sqrt
-import pandas as pd
 from Preprocessing import categoricalToNumeric
 
 
-class KNN():
-    def __init__(self, k_neighbors):
+class KNN:
+    def __init__(self, train_file, test_file, k_neighbors):
         self.k_neighbors = k_neighbors
-        self.train_data = None
-        self.test_data = None
+        self.train_data = train_file
+        self.test_data = test_file
+        self.score = 0
 
     def rowsDistance(self, row1, row2):
         """
@@ -46,56 +46,43 @@ class KNN():
     def classifyPoint(self, test_row):
         """
         Classify point to the nearest points.
-        :param train_dataset: train data
-        :param test_row: specific train row
-        :param k_neighbors: amount of closest neighbors on a specific point.
+        :param test_row: row to be classified.
         :return: Classified point.
         """
-        neighbors = self.get_neighbors(self.train_data, test_row, self.k_neighbors)
+        neighbors = self.getNeighbors(self.train_data, test_row, self.k_neighbors)
         class_column = [row[-1] for row in neighbors]
         predict = max(set(class_column), key=class_column.count)  # return the max value with the most occurrences
         return predict
 
-    def loadData(self, train_file, test_file):
+    def __loadData(self):
         """
         Load and preprocess the datasets.
         :return: processed datasets.
         """
-        self.train_data = train_file
-        self.test_data = test_file
-
+        print("Initializing and Discretizing Data...")
         self.train_data.dropna(inplace=True)
         self.train_data.reset_index(drop=True, inplace=True)
         self.test_data.dropna(inplace=True)
         self.test_data.reset_index(drop=True, inplace=True)
         categoricalToNumeric(self.train_data)
         categoricalToNumeric(self.test_data)
+        print("Discretization Completed!")
 
     def prediction(self):
         """
         Start prediction with KNN algorithm
-        :param train_size: amount of rows in train dataset
-        :param test_size: amount of rows in test dataset
         :return: Success Prediction Rate.
         """
-        success_guess = 0
         print('Prediction Started!')
         for row in range(len(self.test_data)):  # Classify each row in the test with all rows in the train
             guess = self.classifyPoint(self.test_data.iloc[row])
-            print('Actual classification: {0} | Guess Classification: {1}'.format(self.test_data.iloc[row][-1], guess))
+            print('\rCalculating: {0}%'.format(round(row / len(self.test_data) * 100, ndigits=3)), end='')
             if self.test_data.iloc[row][-1] == guess:
-                success_guess += 1
+                self.score += 1
 
-        print('Success Rate {0}'.format((success_guess / len(self.test_data)) * 100))
+        print('\r', end='')
+        print('Success Rate {0}'.format((self.score / len(self.test_data)) * 100))
 
-
-def run():
-    train = pd.read_csv('train.csv', delimiter=',')[:100]
-    test = pd.read_csv('test.csv', delimiter=',')
-    knn = KNN(k_neighbors=5)
-    knn.loadData(train, test)
-    knn.prediction()
-
-
-# Star Model
-run()
+    def run(self):
+        self.__loadData()
+        self.prediction()

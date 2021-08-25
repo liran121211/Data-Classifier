@@ -201,5 +201,63 @@ def f1ScoreSKLearn(y_test, y_prediction, textual=False):
 
     return result
 
-def trainAccuracy():
 
+def testAccuracy(obj):
+    """
+    Calculate the test accuracy of the given model
+    :param obj: Model object
+    :return: Test accuracy
+    """
+    if obj.__class__.__name__ == "NaiveBayes":
+        print('Test Accuracy: %f' % (obj.score / len(obj.X_y_test)))
+    elif obj.__class__.__name__ == "NaiveBayes_SKLearn":
+        print('Test Accuracy: %f' % (obj.score / len(obj.y_test)))
+    elif obj.__class__.__name__ == "DecisionTree":
+        print('Test Accuracy: %f' % (obj.score / len(obj.test_data)))
+    elif obj.__class__.__name__ == "DecisionTreeSKLearn":
+        print('Test Accuracy: %f' % (obj.score / len(obj.y_test)))
+    elif obj.__class__.__name__ == "KNN":
+        print('Test Accuracy: %f' % (obj.score / len(obj.test_data)))
+    elif obj.__class__.__name__ == "KMeans":
+        print('Test Accuracy: %f' % (obj.score / len(obj.result)))
+    else:
+        raise Exception('Model [{0}] does not support testAccuracy() function'.format(obj.__class__.__name__))
+
+
+def trainAccuracy(obj):
+    """
+    Calculate the train accuracy of the given model
+    :param obj: Model object
+    :return: Test accuracy
+    """
+    if obj.__class__.__name__ == "NaiveBayes":
+        obj.score = 0
+        obj.X_y_test = obj.X_y_train
+        obj.test(obj.class_probabilities[1], obj.class_probabilities[0])
+        print('Train Accuracy: %f' % (obj.score / len(obj.X_y_test)))
+    elif obj.__class__.__name__ == "NaiveBayes_SKLearn":
+        obj.score = 0
+        obj.X_test = obj.X_train
+        obj.y_test = obj.y_train
+        obj.run()
+        print('Train Accuracy: %f' % (obj.score / len(obj.y_test)))
+    elif obj.__class__.__name__ == "DecisionTree":
+        obj.score = 0
+        obj.test_data = obj.train_data
+        obj.test()
+        print('Train Accuracy: %f' % (obj.score / len(obj.test_data)))
+    elif obj.__class__.__name__ == "DecisionTreeSKLearn":
+        obj.score = 0
+        obj.X_test = obj.X_train
+        obj.y_test = obj.y_train
+        obj.run()
+        print('Train Accuracy: %f' % (obj.score / len(obj.y_test)))
+    elif obj.__class__.__name__ == "KNN":
+        obj.score = 0
+        obj.test_data = obj.train_data
+        obj.prediction()
+        print('Train Accuracy: %f' % (obj.score / len(obj.test_data)))
+    elif obj.__class__.__name__ == "KMeans":
+        raise Exception('KMeans algorithm does not support TRAIN/TEST FILE')
+    else:
+        raise Exception('Model [{0}] does not support trainAccuracy() function'.format(obj.__class__.__name__))

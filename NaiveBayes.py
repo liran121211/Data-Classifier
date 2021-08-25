@@ -6,7 +6,7 @@ class NaiveBayes:
     def __init__(self, train_file, test_file):
         self.X_y_train = train_file
         self.X_y_test = test_file
-        self.y_train_col_name = train_file.iloc[:,-1].name
+        self.y_train_col_name = train_file.iloc[:, -1].name
         self.class_probabilities = []
         self.X_train_col_names = []
         self.y_prediction = []
@@ -53,18 +53,24 @@ class NaiveBayes:
         # Calculate Probabilities for each unique (class column) value
         no_dict = {}
         yes_dict = {}
+        i = 0
 
         for column, array in self.probabilities.items():
+            print('\rCalculating: {0}%'.format(round(i / len(self.probabilities.items()) * 100, ndigits=3)), end='')
+
             for value in array:
                 if column.lower() != self.y_train_col_name:  # if (column) is not last classification column
                     no_dict[(column, value)] = count_conditional_att(self.X_y_train, column, value,
-                                                                          self.y_train_col_name, self.X_train_col_names[0])
-                    yes_dict[(column, value)] = count_conditional_att(self.X_y_train, column, value,
-                                                                           self.y_train_col_name, self.X_train_col_names[1])
+                                                                     self.y_train_col_name,
+                                                                     self.X_train_col_names[0])
 
+                    yes_dict[(column, value)] = count_conditional_att(self.X_y_train, column, value,
+                                                                      self.y_train_col_name,
+                                                                      self.X_train_col_names[1])
+            i += 1
+        print('\r', end='')
         self.class_probabilities.append(no_dict)
         self.class_probabilities.append(yes_dict)
-        print('Training Completed!')
 
     def naive_bayes_classifier(self, yes_dict, no_dict, row):
         """
@@ -103,19 +109,18 @@ class NaiveBayes:
         :return: amount of correct predictions
         """
         print('Testing Started...')
-        count_correct = 0
         for row in range(len(self.X_y_test)):
+            print('\rCalculating: {0}%'.format(round(row / len(self.X_y_test) * 100, ndigits=3)), end='')
+
             answer = self.naive_bayes_classifier(yes_dict=y_dict, no_dict=n_dict, row=row)
             self.y_prediction.append(answer)
             real_answer = (self.X_y_test.iloc[row][-1])
             if answer == real_answer:
-                count_correct += 1
+                self.score += 1
 
-        self.score = count_correct
-        print('Testing Completed!')
+        print('\r', end='')
         print("Total correct was: {0}/{1} | %{2}".format(self.score, len(self.X_y_test),
                                                          round((self.score / len(self.X_y_test)) * 100, ndigits=3)))
-
 
     def run(self):
         # Load Information
@@ -123,13 +128,14 @@ class NaiveBayes:
         self.train()
         self.test(self.class_probabilities[1], self.class_probabilities[0])
 
+
 class NaiveBayes_SKLearn:
-    def __init__(self, train_data, test_data):
+    def __init__(self, train_file, test_file):
         self.model = GaussianNB()
-        self.y_train = train_data.iloc[:, -1]
-        self.X_train = train_data.drop(columns=[train_data.iloc[:, -1].name], axis=0)
-        self.y_test = test_data.iloc[:, -1]
-        self.X_test = test_data.drop(columns=[test_data.iloc[:, -1].name], axis=0)
+        self.y_train = train_file.iloc[:, -1]
+        self.X_train = train_file.drop(columns=[train_file.iloc[:, -1].name], axis=0)
+        self.y_test = test_file.iloc[:, -1]
+        self.X_test = test_file.drop(columns=[test_file.iloc[:, -1].name], axis=0)
         self.y_prediction = []
         self.score = 0
 
@@ -140,7 +146,6 @@ class NaiveBayes_SKLearn:
         categoricalToNumeric(self.y_train)
         categoricalToNumeric(self.X_test)
         categoricalToNumeric(self.y_test)
-        print('All data successfully converted!')
 
         # Train Model
         print('Training Model...')
@@ -149,23 +154,12 @@ class NaiveBayes_SKLearn:
         # Test Model
         print('Testing Model...')
         for row in range(len(self.X_test)):
+            print('\rCalculating: {0}%'.format(round(row / len(self.X_test) * 100, ndigits=3)), end='')
             prediction = self.model.predict([self.X_test.iloc[row]])
             self.y_prediction.append(prediction)
             if prediction == self.y_test.iloc[row]:
                 self.score += 1
 
+        print('\r', end='')
         print("Total correct was: {0}/{1} | %{2}".format(self.score, len(self.y_test),
                                                          round((self.score / len(self.y_test)) * 100, ndigits=3)))
-
-
-# Start Model
-# train = pd.read_csv('train.csv', delimiter=',')
-# test = pd.read_csv('test.csv', delimiter=',')
-#
-# nb_sklearn = NaiveBayes_SKLearn(train, test)
-# nb_sklearn.run()
-#
-# naive_bayes = NaiveBayes()
-# naive_bayes.run(train, test)
-
-

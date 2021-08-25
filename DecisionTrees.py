@@ -1,7 +1,8 @@
 import pprint
 import numpy as np
+from sklearn import tree
 
-from Preprocessing import discretization, categoricalToNumeric, info_gain
+from Preprocessing import discretization, categoricalToNumeric, info_gain, loadingSign
 from sklearn.tree import DecisionTreeClassifier
 
 
@@ -13,6 +14,7 @@ class DecisionTree:
         self.prediction_data = []
         self.tree = None
         self.score = 0
+        self.sign = '|'
 
     def find_best_column(self, data):
         """
@@ -48,6 +50,8 @@ class DecisionTree:
         :param tree: Nested Dictionary
         :return: Decision Tree
         """
+        self.sign = loadingSign(self.sign)
+        print("\rBuilding Tree, This might take a while...{0}".format(self.sign), end='')
         info_gain_data = self.find_best_column(data)
         node = info_gain_data[0]  # Get column name with maximum information gain
         node_unique_values = np.unique(data[node])  # Get unique values of the column
@@ -62,8 +66,6 @@ class DecisionTree:
         for value in node_unique_values:
             sub_table = self.get_sub_table(data, node, value)
             column_values, counts = np.unique(sub_table[data.columns[-1]], return_counts=True)
-
-            print(sub_table)
 
             # Pruning By Info Gain
             if info_gain_data[1] < self.threshold:
@@ -118,12 +120,9 @@ class DecisionTree:
             if not isinstance(self.test_data[column][1], str):
                 discretization(dataset=self.test_data, column=column, bins=5, mode='entropy', max_bins=3)
 
-        print("Discretization Completed!")
-
     def train(self):
-        print("Building Tree...")
         self.tree = self.build_tree(self.train_data)
-        print("Building Tree Completed!")
+        print("\r", end='')
 
     def test(self):
         print("Now Testing Data...")
@@ -131,6 +130,7 @@ class DecisionTree:
         test_dict = {}
 
         for row in range(len(self.test_data.values)):
+            print('\rCalculating: {0}%'.format(round(row / len(self.test_data) * 100, ndigits=3)), end='')
             for column in self.test_data.keys():
                 test_dict[column] = self.test_data.iloc[row][column]
 
@@ -139,16 +139,17 @@ class DecisionTree:
             if self.test_data.iloc[row][column] == prediction:
                 self.score += 1
 
-        print("Testing Data Completed!")
+        print('\r', end='')
         print("Correct Answers : {0} | Bad Guesses: {1} | Success Rate: {2}%".format(
             self.score, len(self.test_data) - self.score, round(self.score / len(self.test_data) * 100, ndigits=4)))
 
-    def run(self):
+    def run(self, textual = False):
         # Load and data
         self.loadData()
         self.train()
         self.test()
-        pprint.pprint(self.tree)
+        if textual:
+            pprint.pprint(self.tree)
 
 
 class DecisionTreeSKLearn:
@@ -161,15 +162,13 @@ class DecisionTreeSKLearn:
         self.y_prediction = []
         self.score = 0
 
-    def run(self):
-
+    def run(self, textual = False):
         # Preprocess data
         print('Converting categorical data to numeric data...')
         categoricalToNumeric(self.X_train)
         categoricalToNumeric(self.y_train)
         categoricalToNumeric(self.X_test)
         categoricalToNumeric(self.y_test)
-        print('All data successfully converted!')
 
         # Train Model
         print('Training Model...')
@@ -178,21 +177,16 @@ class DecisionTreeSKLearn:
         # Test Model
         print('Testing Model...')
         for row in range(len(self.X_test)):
+            print('\rCalculating: {0}%'.format(round(row / len(self.X_test) * 100, ndigits=3)), end='')
             predict = self.model.predict([self.X_test.iloc[row]])
             self.y_prediction.append(predict)
             if predict == self.y_test.iloc[row]:
                 self.score += 1
 
+        print('\r', end='')
         print("Total correct was: {0}/{1} | %{2}".format(self.score, len(self.y_test),
                                                          round((self.score / len(self.y_test)) * 100,
                                                                ndigits=3)))
 
-# train = pd.read_csv('adult.csv', delimiter=',')[:25000]
-# test = pd.read_csv('adult.csv', delimiter=',')[25001:]
-# dt = DecisionTreeSKLearn(train_data=train, test_data=test, max_depth=2, random_state=4)
-# dt.run()
-
-# Start Model
-# train_data = pd.read_csv('adult.csv', delimiter=',')[:25000]
-# test_data = pd.read_csv('adult.csv', delimiter=',')[25001:]
-# run(train_data, test_data)
+        if textual:
+            print(tree.export_text(self.model))
