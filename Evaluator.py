@@ -241,6 +241,7 @@ def trainAccuracy(obj):
     """
     if obj.__class__.__name__ == "NaiveBayes":
         obj.score = 0
+        obj.y_prediction = []
         obj.X_y_test = obj.X_y_train
         obj.test(obj.class_probabilities[1], obj.class_probabilities[0])
         print('Train Accuracy: %f' % (obj.score / len(obj.X_y_test)))
@@ -248,21 +249,25 @@ def trainAccuracy(obj):
         obj.score = 0
         obj.X_test = obj.X_train
         obj.y_test = obj.y_train
+        obj.y_prediction = []
         obj.run()
         print('Train Accuracy: %f' % (obj.score / len(obj.y_test)))
     elif obj.__class__.__name__ == "DecisionTree":
         obj.score = 0
+        obj.y_prediction = []
         obj.test_data = obj.train_data
         obj.test()
         print('Train Accuracy: %f' % (obj.score / len(obj.test_data)))
     elif obj.__class__.__name__ == "DecisionTreeSKLearn":
         obj.score = 0
+        obj.y_prediction = []
         obj.X_test = obj.X_train
         obj.y_test = obj.y_train
         obj.run()
         print('Train Accuracy: %f' % (obj.score / len(obj.y_test)))
     elif obj.__class__.__name__ == "KNN":
         obj.score = 0
+        obj.y_prediction = []
         obj.test_data = obj.train_data
         obj.prediction()
         print('Train Accuracy: %f' % (obj.score / len(obj.test_data)))
@@ -278,6 +283,7 @@ def analysis(obj):
     :param obj: Model object
     :return: evaluation accuracies
     """
+    print("Runing Analysis...\n")
     if obj.__class__.__name__ == "NaiveBayes":
         confusionMatrix(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, visual=True, textual=True)
         accuracy(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)

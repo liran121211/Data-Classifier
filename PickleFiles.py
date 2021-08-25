@@ -8,6 +8,7 @@ def storeData(obj_model):
     :param obj_model: object model
     :return: pickled file
     """
+    print("Saving file into (pk) dump file...\n")
     time_stamp = datetime.today().strftime('%d_%m_%Y')
     file_name = time_stamp + '_' + obj_model.__class__.__name__ + '.pk'
     # create empty object file
@@ -28,8 +29,14 @@ def loadData(file_model):
     object_file = None
     try:
         object_file = open(file_model, 'rb')
+        object_model = pickle.load(object_file)
+        object_file.close()
+        return object_model
     except FileNotFoundError:
         print("FATAL ERROR: file does not exist in the given destination.")
-    object_model = pickle.load(object_file)
-    object_file.close()
-    return object_model
+        exit()
+    except Exception:
+        print("FATAL ERROR: pickle file is invalid or corrupted.")
+        exit()
+
+
