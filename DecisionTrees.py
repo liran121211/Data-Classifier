@@ -1,5 +1,6 @@
 import pprint
 import numpy as np
+
 from Preprocessing import discretization, categoricalToNumeric, info_gain
 from sklearn.tree import DecisionTreeClassifier
 
@@ -8,8 +9,10 @@ class DecisionTree:
     def __init__(self, train_data, test_data, threshold=0.01):
         self.train_data = train_data
         self.test_data = test_data
-        self.tree = None
         self.threshold = threshold
+        self.prediction_data = []
+        self.tree = None
+        self.score = 0
 
     def find_best_column(self, data):
         """
@@ -109,13 +112,11 @@ class DecisionTree:
         print("Initializing and Discretizing Data...")
         for column in self.train_data:
             if not isinstance(self.train_data[column][1], str):
-                # discretization(self.train_data, column, 3, "equal-frequency",labels = [chr(i) for i in range(ord('A'), ord('C') + 1)])
-                discretization(dataset=self.train_data, column=column, bins=15, mode='entropy', max_bins=5)
+                discretization(dataset=self.train_data, column=column, bins=5, mode='entropy', max_bins=3)
 
         for column in self.test_data:
             if not isinstance(self.test_data[column][1], str):
-                # discretization(self.test_data, column, 3, "equal-frequency",labels = [chr(i) for i in range(ord('A'), ord('C') + 1)])
-                discretization(dataset=self.test_data, column=column, bins=15, mode='entropy', max_bins=5)
+                discretization(dataset=self.test_data, column=column, bins=5, mode='entropy', max_bins=3)
 
         print("Discretization Completed!")
 
@@ -127,62 +128,62 @@ class DecisionTree:
     def test(self):
         print("Now Testing Data...")
         column = None
-        match = 0
         test_dict = {}
 
         for row in range(len(self.test_data.values)):
             for column in self.test_data.keys():
                 test_dict[column] = self.test_data.iloc[row][column]
 
-            if self.test_data.iloc[row][column] == self.predict(self.tree, test_dict):
-                match += 1
+            prediction = self.predict(self.tree, test_dict)
+            self.prediction_data.append(prediction)
+            if self.test_data.iloc[row][column] == prediction:
+                self.score += 1
 
         print("Testing Data Completed!")
         print("Correct Answers : {0} | Bad Guesses: {1} | Success Rate: {2}%".format(
-            match, len(self.test_data) - match, round(match / len(self.test_data) * 100, ndigits=4)))
+            self.score, len(self.test_data) - self.score, round(self.score / len(self.test_data) * 100, ndigits=4)))
 
-
-def run(train_data, test_data):
-    # Load and data
-    decision_tree = DecisionTree(train_data, test_data, threshold=0.00001)
-    decision_tree.loadData()
-    decision_tree.train()
-    decision_tree.test()
-    pprint.pprint(decision_tree.tree)
+    def run(self):
+        # Load and data
+        self.loadData()
+        self.train()
+        self.test()
+        pprint.pprint(self.tree)
 
 
 class DecisionTreeSKLearn:
     def __init__(self, train_data, test_data, max_depth, random_state=0):
-        self.train_dataset = train_data
-        self.test_dataset = test_data
-        self.class_col = train_data[train_data.columns[-1]]
         self.model = DecisionTreeClassifier(max_depth=max_depth, random_state=random_state)
+        self.y_train = train_data.iloc[:, -1]
+        self.X_train = train_data.drop(columns=[train_data.iloc[:, -1].name], axis=0)
+        self.y_test = test_data.iloc[:, -1]
+        self.X_test = test_data.drop(columns=[test_data.iloc[:, -1].name], axis=0)
+        self.y_prediction = []
         self.score = 0
-        self.prediction_column = []
 
     def run(self):
-        success_guess = 0
 
         # Preprocess data
-        categoricalToNumeric(self.train_dataset)
-        categoricalToNumeric(self.test_dataset)
+        categoricalToNumeric(self.X_train)
+        categoricalToNumeric(self.y_train)
+        categoricalToNumeric(self.X_test)
+        categoricalToNumeric(self.y_test)
 
         # Train Model
         print('Training Model...')
-        self.model.fit(self.train_dataset, self.class_col)
+        self.model.fit(self.X_train, self.y_train)
 
         # Test Model
         print('Testing Model...')
-        for row in range(len(self.test_dataset)):
-            predict = self.model.predict([self.test_dataset.iloc[row]])
-            self.prediction_column.append(predict)
-            if predict == self.class_col[row]:
-                success_guess += 1
+        for row in range(len(self.X_test)):
+            predict = self.model.predict([self.X_test.iloc[row]])
+            self.y_prediction.append(predict)
+            if predict == self.y_test.iloc[row]:
+                self.score += 1
 
-        print("Total correct was: {0}/{1} | %{2}".format(success_guess, len(self.test_dataset),
-                                                         round((success_guess / len(self.test_dataset)) * 100,
+        print("Total correct was: {0}/{1} | %{2}".format(self.score, len(self.y_test),
+                                                         round((self.score / len(self.y_test)) * 100,
                                                                ndigits=3)))
-
 
 # train = pd.read_csv('adult.csv', delimiter=',')[:25000]
 # test = pd.read_csv('adult.csv', delimiter=',')[25001:]

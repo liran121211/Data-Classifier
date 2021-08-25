@@ -125,7 +125,11 @@ def categoricalToNumeric(dataset):
     """
     pp = preprocessing.LabelEncoder()
     print('Converting categorical data to numeric data...')
-    if (isinstance(dataset, list)):
+    if (isinstance(dataset, pd.Series)):
+        pp.fit(dataset)
+        return pp.transform(dataset)
+
+    elif (isinstance(dataset, list)):
         dataset = np.ravel(dataset)
         pp.fit(dataset)
         return pp.transform(dataset)
@@ -265,7 +269,7 @@ def entropyDiscretization(dataset, column, bins_range, max_bins):
     # Preserve original dataset
     temp_dataset = dataset.copy()
 
-    # Save classification column name [1: 0.47,3: 0.22,5: 0.90,7]
+    # Save classification column name
     class_name = dataset[dataset.columns[-1]].name
 
     # Split column into (bins) equal groups
