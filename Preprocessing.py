@@ -1,6 +1,6 @@
 # from matplotlib import pyplot as plt
 import numpy as np
-from sklearn import preprocessing as pp
+from sklearn import preprocessing as pp, preprocessing
 import pandas as pd
 from matplotlib import pyplot as plt
 import random as rnd
@@ -179,12 +179,12 @@ data_ma = [22.273, 22.194, 22.085, 22.174, 22.184, 22.134, 22.234, 22.432, 22.24
            23.356, 24.052, 23.753, 23.832, 23.952, 23.634, 23.823, 23.872, 23.654, 23.187, 23.098, 23.326, 22.681,
            23.098,
            22.403, 22.173]
-weights = [x for x in range(10)]
-print(exponentialMovingAverage(data_ma, 5))
-print(pandaEMA(data_ma, 5))
-
-# data to be binned
-data2 = [5, 10, 11, 13, 15, 35, 50, 55, 72, 92, 204, 215]
+# weights = [x for x in range(10)]
+# print(exponentialMovingAverage(data_ma, 5))
+# print(pandaEMA(data_ma, 5))
+#
+# # data to be binned
+# data2 = [5, 10, 11, 13, 15, 35, 50, 55, 72, 92, 204, 215]
 
 
 # Smoothing By Bin Means
@@ -215,3 +215,37 @@ def binBoundaries(dataset, interval=2):
                 else:
                     sort_data[bin][index] = max_bin_value[bin]
     return sort_data
+
+
+def categoricalToNumeric(dataset):
+    """
+    Convert Categorical data into Numeric data.
+    :param dataset: dataframe (Pandas).
+    :return: Numeric dataset.
+    """
+    print('Converting categorical data to numeric data...')
+    pp = preprocessing.LabelEncoder()
+    for column in dataset:
+        if type(column[1]) is str:
+            pp.fit(dataset[column])
+            dataset[column] = pp.transform(dataset[column])
+    print('All data successfully converted!')
+
+
+def discretization(dataset, column, bins, mode, labels=None):
+    """
+    :param dataset: Pandas DataFrame
+    :param column: specific column in the dataset
+    :param bins: amount of bins to separate the values in the columns
+    :param labels: rename the bins into specific name
+    :param mode: choose equal_width / equal frequency binning
+    :return: discretization on column
+    """
+    if mode == 'equal-width':
+        dataset[column] = pd.qcut(dataset[column], q=bins, labels=labels)
+
+    if mode == 'equal-frequency':
+        dataset[column] = pd.cut(dataset[column], bins=bins, labels=labels)
+
+    else:
+        raise NameError("Mode does not exist!")
