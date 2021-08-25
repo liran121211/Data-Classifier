@@ -3,6 +3,7 @@ from sklearn import preprocessing
 from math import log
 from numpy import ravel
 import pandas as pd
+import entropy_based_binning as entropy_binning
 
 
 def minMax(dataset):  # Min-Max Scaling
@@ -129,27 +130,28 @@ def categoricalToNumeric(dataset):
                 dataset[column] = pp.transform(dataset[column])
 
 
-def discretization(dataset, column, bins, mode, max_bins=None, labels=None):
+def discretization(dataset, column, bins, mode):
     """
-    :param max_bins: New bins range for entropy binning
     :param dataset: Pandas DataFrame
     :param column: Specific column in the dataset
     :param bins: Amount of bins to separate the values in the columns
-    :param labels: Rename the bins into specific name
-    :param mode: Choose equal_width / equal frequency binning
+    :param mode: Choose equal_width / equal frequency / entropy binning
     :return: Discretization on column
     """
     if mode == 'equal-width':
-        dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=labels)
+        try:
+            dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(65+bins)))])
+        except ValueError:
+            dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(65+bins)))], duplicates='drop')
 
     elif mode == 'equal-frequency':
-        dataset[column] = pd.cut(x=dataset[column], bins=bins, labels=labels)
+        dataset[column] = pd.cut(x=dataset[column], bins=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(65+bins)))])
 
     elif mode == 'entropy':
-        entropyDiscretization(dataset=dataset, column=column, bins_range=bins, max_bins=max_bins)
-
+        dataset[column] = categoricalToNumeric(dataset[column])
+        dataset[column] = entropy_binning.bin_sequence(dataset[column], nbins=bins)
     else:
-        raise NameError("Mode does not exist!")
+        print('Warning: No discretization selected, process might take longer than expected...\n')
 
 
 def count_att(data, column, value):
@@ -252,13 +254,13 @@ def info_gain(data, column, l_base=2):
     return sum_gain
 
 
-def entropyDiscretization(dataset, column, bins_range, max_bins):
+def entropyDiscretization(dataset, column, initial_split, bins_):
     """
     Supervised Binning, Split the data into groups that has the most information gain.
     :param dataset: Pandas DataFrame.
     :param column: column for binning
-    :param bins_range: split column for (x) equal groups.
-    :param max_bins: choose (x) groups to bin that has the most information gain.
+    :param initial_split: split column for (x) equal groups.
+    :param bins_: choose (x) groups to bin that has the most information gain.
     :return: Binned column by entropy.
     """
     info_gain_dict = {}
@@ -270,7 +272,7 @@ def entropyDiscretization(dataset, column, bins_range, max_bins):
     class_name = dataset[dataset.columns[-1]].name
 
     # Split column into (bins) equal groups
-    cat, bins = pd.qcut(temp_dataset[column], q=bins_range, retbins=True, duplicates='drop')
+    cat, bins = pd.qcut(temp_dataset[column], q=initial_split, retbins=True, duplicates='drop')
 
     # Iterate thorough each unique bin value in (bins array) and get new sub_table with values greater than bin value
     for value in range(len(bins)):
@@ -279,7 +281,7 @@ def entropyDiscretization(dataset, column, bins_range, max_bins):
 
     # Finding bin group with the best info gain (up to max_bins groups)
     new_bins = []
-    best_values = Counter(info_gain_dict).most_common(max_bins)
+    best_values = Counter(info_gain_dict).most_common(bins_)
     for bin in best_values:
         new_bins.append(bin[0])
     new_bins.sort()
@@ -288,6 +290,57 @@ def entropyDiscretization(dataset, column, bins_range, max_bins):
     dataset[column] = pd.cut(dataset[column], new_bins, labels=[chr(i) for i in range(
         ord('A'), ord(chr(65 + len(new_bins) - 1)))]).values.add_categories('other')
     dataset[column] = dataset[column].fillna('other')
+
+    return dataset[column]
+
+
+def validator(**kwargs):
+    """
+    Validate parameters according to the function requirements.
+    :param kwargs: dictionary of parameter_name: parameter
+    :return: error if parameter is not fit else nothing.
+    """
+    if 'train_data' in kwargs and 'test_data' in kwargs:
+        if kwargs['train_data'] is None or kwargs['test_data'] is None:
+            raise Exception("no train dataset or test dataset were loaded.")
+
+        if not isinstance(kwargs['train_data'], pd.DataFrame) or not isinstance(kwargs['test_data'], pd.DataFrame):
+            raise Exception("train dataset or test dataset is not pandas DataFrame object.")
+
+        if len(kwargs['train_data']) == 0 or len(kwargs['test_data']) == 0:
+            raise Exception("train dataset or test dataset is empty.")
+
+    if 'confusion_matrix' in kwargs:
+        if len(kwargs['confusion_matrix'].columns) < 2:
+            raise Exception('Cannot calculate Accuracy / Precision / Recall / F1-Score with 1D array as Confusion '
+                            'Matrix.')
+    if 'bin' in kwargs:
+        if kwargs['bin'] <= 0:
+            raise Exception("Bin value must be greater than 0.")
+
+    if 'threshold' in kwargs:
+        if kwargs['threshold'] <= 0:
+            raise Exception("Threshold value must be greater than 0.")
+
+    if 'max_depth' in kwargs:
+        if kwargs['max_depth'] <= 0:
+            raise Exception("Max Depth value must be greater than 0.")
+
+    if 'random_state' in kwargs:
+        if kwargs['random_state'] <= 0:
+            raise Exception("Random State value must be different than 0.")
+
+    if 'k_neighbors' in kwargs:
+        if kwargs['k_neighbors'] <= 0:
+            raise Exception("K-Neighbors value must be at least 1.")
+
+    if 'k_means' in kwargs:
+        if kwargs['k_means'] <= 0:
+            raise Exception("K-Means value must be at least 1.")
+
+    if 'max_iterations' in kwargs:
+        if kwargs['max_iterations'] <= 0:
+            raise Exception("Max Iterations value must be at least 1.")
 
 
 def loadingSign(state):

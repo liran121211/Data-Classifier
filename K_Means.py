@@ -1,10 +1,10 @@
 import numpy as np
-import pandas as pd
-from Preprocessing import categoricalToNumeric
+from Preprocessing import categoricalToNumeric, validator
 
 
 class KMeans:
     def __init__(self, train_data, k_means=5, max_iterations=100, random_state=30):
+        validator(train_data=train_data, k_means=k_means, max_iterations=max_iterations, random_state=random_state)
         self.dataset = train_data
         self.num_rows = None
         self.num_features = None
@@ -160,7 +160,7 @@ class KMeans:
             if self.result[i] == self.class_[i]:
                 self.score += 1
 
-        print('\r',end='')
+        print('\r', end='')
         print("Success Rate: {0}".format((self.score / len(self.result)) * 100))
 
     def run(self):

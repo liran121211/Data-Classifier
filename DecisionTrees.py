@@ -2,16 +2,20 @@ import pprint
 import numpy as np
 from sklearn import tree
 
-from Preprocessing import discretization, categoricalToNumeric, info_gain, loadingSign
+from Preprocessing import discretization, categoricalToNumeric, info_gain, loadingSign, validator
 from sklearn.tree import DecisionTreeClassifier
 
 
 class DecisionTree:
-    def __init__(self, train_data, test_data, threshold=0.01):
+    def __init__(self, train_data, test_data, threshold=0.01, bins=None, discretization_mode=None):
+        validator(train_data=train_data, test_data=test_data, bins=bins, discretization_mode=discretization_mode)
+
         self.train_data = train_data
         self.test_data = test_data
         self.threshold = threshold
         self.prediction_data = []
+        self.discretization_mode = discretization_mode
+        self.bins = int(bins)
         self.tree = None
         self.score = 0
         self.sign = '|'
@@ -106,19 +110,33 @@ class DecisionTree:
         Initialize train and test data, drop all NaN values, make discretization on each of the Numeric columns
         :return: processed train and test data
         """
-        self.train_data.dropna(inplace=True)
-        self.train_data.reset_index(drop=True, inplace=True)
-        self.test_data.dropna(inplace=True)
-        self.test_data.reset_index(drop=True, inplace=True)
-
         print("Initializing and Discretizing Data...")
         for column in self.train_data:
+            if isinstance(self.train_data[column].iloc[1], str):
+                most_common_value = self.train_data[column].value_counts().idxmax()
+                self.train_data[column] = self.train_data[column].fillna(most_common_value)
+            else:
+                column_mean = self.train_data[column].mean()
+                self.train_data[column] = self.train_data[column].fillna(int(column_mean))
+
+        for column in self.test_data:
+            if isinstance(self.test_data[column].iloc[1], str):
+                most_common_value = self.test_data[column].value_counts().idxmax()
+                self.test_data[column] = self.test_data[column].fillna(most_common_value)
+            else:
+                column_mean = self.test_data[column].mean()
+                self.test_data[column] = self.test_data[column].fillna(int(column_mean))
+
+        self.train_data.reset_index(drop=True, inplace=True)
+        self.test_data.reset_index(drop=True, inplace=True)
+
+        for column in self.train_data:
             if not isinstance(self.train_data[column][1], str):
-                discretization(dataset=self.train_data, column=column, bins=5, mode='entropy', max_bins=3)
+                discretization(dataset=self.train_data, column=column, bins=self.bins, mode=self.discretization_mode)
 
         for column in self.test_data:
             if not isinstance(self.test_data[column][1], str):
-                discretization(dataset=self.test_data, column=column, bins=5, mode='entropy', max_bins=3)
+                discretization(dataset=self.test_data, column=column, bins=self.bins, mode=self.discretization_mode)
 
     def train(self):
         self.tree = self.build_tree(self.train_data)
@@ -143,7 +161,7 @@ class DecisionTree:
         print("Correct Answers : {0} | Bad Guesses: {1} | Success Rate: {2}%".format(
             self.score, len(self.test_data) - self.score, round(self.score / len(self.test_data) * 100, ndigits=4)))
 
-    def run(self, textual = False):
+    def run(self, textual=False):
         # Load and data
         self.loadData()
         self.train()
@@ -153,7 +171,9 @@ class DecisionTree:
 
 
 class DecisionTreeSKLearn:
-    def __init__(self, train_data, test_data, max_depth, random_state=0):
+    def __init__(self, train_data, test_data, max_depth, random_state):
+        validator(train_data=train_data, test_data=test_data, max_depth=max_depth, random_state=random_state)
+
         self.model = DecisionTreeClassifier(max_depth=max_depth, random_state=random_state)
         self.y_train = train_data.iloc[:, -1]
         self.X_train = train_data.drop(columns=[train_data.iloc[:, -1].name], axis=0)
@@ -162,13 +182,22 @@ class DecisionTreeSKLearn:
         self.y_prediction = []
         self.score = 0
 
-    def run(self, textual = False):
+    def run(self, textual=False):
         # Preprocess data
         print('Converting categorical data to numeric data...')
         categoricalToNumeric(self.X_train)
         categoricalToNumeric(self.y_train)
         categoricalToNumeric(self.X_test)
         categoricalToNumeric(self.y_test)
+
+        self.X_train.dropna(inplace=True)
+        self.y_train.dropna(inplace=True)
+        self.X_test.dropna(inplace=True)
+        self.y_test.dropna(inplace=True)
+        self.y_train.reset_index(drop=True, inplace=True)
+        self.X_train.reset_index(drop=True, inplace=True)
+        self.X_test.reset_index(drop=True, inplace=True)
+        self.y_test.reset_index(drop=True, inplace=True)
 
         # Train Model
         print('Training Model...')

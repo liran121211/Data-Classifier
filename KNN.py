@@ -1,9 +1,10 @@
 from math import sqrt
-from Preprocessing import categoricalToNumeric
+from Preprocessing import categoricalToNumeric, validator
 
 
 class KNN:
     def __init__(self, train_file, test_file, k_neighbors):
+        validator(train_data=train_file, test_data=test_file, k_neighbors=k_neighbors)
         self.k_neighbors = k_neighbors
         self.train_data = train_file
         self.test_data = test_file
@@ -54,19 +55,33 @@ class KNN:
         predict = max(set(class_column), key=class_column.count)  # return the max value with the most occurrences
         return predict
 
-    def __loadData(self):
+    def loadData(self):
         """
         Load and preprocess the datasets.
         :return: processed datasets.
         """
-        print("Initializing and Discretizing Data...")
-        self.train_data.dropna(inplace=True)
+        print("Initializing Data...")
+        for column in self.train_data:
+            if (isinstance(self.train_data[column].iloc[1], str)):
+                most_common_value = self.train_data[column].value_counts().idxmax()
+                self.train_data[column] = self.train_data[column].fillna(most_common_value)
+            else:
+                column_mean = self.train_data[column].mean()
+                self.train_data[column] = self.train_data[column].fillna(int(column_mean))
+
+        for column in self.test_data:
+            if (isinstance(self.test_data[column].iloc[1], str)):
+                most_common_value = self.test_data[column].value_counts().idxmax()
+                self.test_data[column] = self.test_data[column].fillna(most_common_value)
+            else:
+                column_mean = self.test_data[column].mean()
+                self.test_data[column] = self.test_data[column].fillna(int(column_mean))
+
         self.train_data.reset_index(drop=True, inplace=True)
-        self.test_data.dropna(inplace=True)
         self.test_data.reset_index(drop=True, inplace=True)
+
         categoricalToNumeric(self.train_data)
         categoricalToNumeric(self.test_data)
-        print("Discretization Completed!")
 
     def prediction(self):
         """
@@ -84,5 +99,5 @@ class KNN:
         print('Success Rate {0}'.format((self.score / len(self.test_data)) * 100))
 
     def run(self):
-        self.__loadData()
+        self.loadData()
         self.prediction()

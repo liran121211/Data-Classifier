@@ -1,9 +1,11 @@
-from Preprocessing import discretization, categoricalToNumeric, count_conditional_att, count_att
+from Preprocessing import discretization, categoricalToNumeric, count_conditional_att, count_att, validator
 from sklearn.naive_bayes import GaussianNB
 
 
 class NaiveBayes:
-    def __init__(self, train_file, test_file):
+    def __init__(self, train_file, test_file, bins=None, discretization_mode=None):
+        validator(train_data=train_file, test_data=test_file, bins=bins, discretization_mode=discretization_mode)
+
         self.X_y_train = train_file
         self.X_y_test = test_file
         self.y_train_col_name = train_file.iloc[:, -1].name
@@ -11,6 +13,8 @@ class NaiveBayes:
         self.X_train_col_names = []
         self.y_prediction = []
         self.probabilities = {}
+        self.discretization_mode = discretization_mode
+        self.bins = int(bins)
         self.score = 0
 
     def loadData(self):
@@ -18,25 +22,38 @@ class NaiveBayes:
         Initialize train and test data, drop all NaN values, make discretization on each of the Numeric columns
         :return: train and test DataFrames
         """
-        self.X_y_train.dropna(inplace=True)
+        for column in self.X_y_train:
+            if isinstance(self.X_y_train[column].iloc[1], str):
+                most_common_value = self.X_y_train[column].value_counts().idxmax()
+                self.X_y_train[column] = self.X_y_train[column].fillna(most_common_value)
+            else:
+                column_mean = self.X_y_train[column].mean()
+                self.X_y_train[column] = self.X_y_train[column].fillna(int(column_mean))
+
+        for column in self.X_y_test:
+            if isinstance(self.X_y_test[column].iloc[1], str):
+                most_common_value = self.X_y_test[column].value_counts().idxmax()
+                self.X_y_test[column] = self.X_y_test[column].fillna(most_common_value)
+            else:
+                column_mean = self.X_y_test[column].mean()
+                self.X_y_test[column] = self.X_y_test[column].fillna(int(column_mean))
+
         self.X_y_train.reset_index(drop=True, inplace=True)
-        self.X_y_test.dropna(inplace=True)
         self.X_y_test.reset_index(drop=True, inplace=True)
 
         for attribute in self.X_y_train[self.X_y_train.columns[-1]].unique():
             self.X_train_col_names.append(attribute)
 
         print("Initializing and Discretizing Data...")
-        for column in self.X_y_train:
-            if not isinstance(self.X_y_train[column][1], str) and column != self.y_train_col_name:
-                discretization(self.X_y_train, column, 5, "equal-frequency",
-                               [chr(i) for i in range(ord('A'), ord('E') + 1)])
+        if self.bins is None or self.bins != 0:
+            for column in self.X_y_train:
+                if not isinstance(self.X_y_train[column][1], str) and column != self.y_train_col_name:
+                    discretization(dataset=self.X_y_train, column=column, bins=self.bins,mode=self.discretization_mode)
 
-        for column in self.X_y_test:
-            if not isinstance(self.X_y_test[column][1], str) and column != self.y_train_col_name:
-                discretization(self.X_y_test, column, 5, "equal-frequency",
-                               [chr(i) for i in range(ord('A'), ord('E') + 1)])
-        print("Discretization Completed!")
+            for column in self.X_y_test:
+                if not isinstance(self.X_y_test[column][1], str) and column != self.y_train_col_name:
+                    discretization(dataset=self.X_y_test, column=column, bins=self.bins,mode=self.discretization_mode)
+            print("Discretization Completed!")
 
         for column in self.X_y_train:
             self.probabilities[column] = self.X_y_train[column].unique()
@@ -117,7 +134,6 @@ class NaiveBayes:
             real_answer = (self.X_y_test.iloc[row][-1])
             if answer == real_answer:
                 self.score += 1
-
         print('\r', end='')
         print("Total correct was: {0}/{1} | %{2}".format(self.score, len(self.X_y_test),
                                                          round((self.score / len(self.X_y_test)) * 100, ndigits=3)))
@@ -131,6 +147,7 @@ class NaiveBayes:
 
 class NaiveBayes_SKLearn:
     def __init__(self, train_file, test_file):
+        validator(train_data=train_file, test_data=test_file)
         self.model = GaussianNB()
         self.y_train = train_file.iloc[:, -1]
         self.X_train = train_file.drop(columns=[train_file.iloc[:, -1].name], axis=0)
@@ -146,6 +163,15 @@ class NaiveBayes_SKLearn:
         categoricalToNumeric(self.y_train)
         categoricalToNumeric(self.X_test)
         categoricalToNumeric(self.y_test)
+
+        self.X_train.dropna(inplace=True)
+        self.y_train.dropna(inplace=True)
+        self.X_test.dropna(inplace=True)
+        self.y_test.dropna(inplace=True)
+        self.y_train.reset_index(drop=True, inplace=True)
+        self.X_train.reset_index(drop=True, inplace=True)
+        self.X_test.reset_index(drop=True, inplace=True)
+        self.y_test.reset_index(drop=True, inplace=True)
 
         # Train Model
         print('Training Model...')

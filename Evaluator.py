@@ -1,7 +1,7 @@
 import pandas as pd
 from seaborn import heatmap
 from matplotlib import pyplot as plt
-from Preprocessing import categoricalToNumeric
+from Preprocessing import categoricalToNumeric, validator
 from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
 
@@ -50,6 +50,7 @@ def accuracy(y_test, y_prediction, textual=False):
     :return: Accuracy percentage
     """
     confusion_matrix_data = confusionMatrix(y_test, y_prediction)
+    validator(confusion_matrix=confusion_matrix_data)
     TP = confusion_matrix_data.iloc[1, 1]
     TN = confusion_matrix_data.iloc[0, 0]
     TP_TN_FP_FN = confusion_matrix_data.values.sum()
@@ -91,6 +92,8 @@ def precision(y_test, y_prediction, textual=False):
     :return: Precision percentage
     """
     confusion_matrix_data = confusionMatrix(y_test, y_prediction)
+    validator(confusion_matrix=confusion_matrix_data)
+
     TP = confusion_matrix_data.iloc[1, 1]
     FP = confusion_matrix_data.iloc[0, 1]
     result = TP / (TP + FP)
@@ -132,6 +135,7 @@ def recall(y_test, y_prediction, textual=False):
     :return: Recall percentage
     """
     confusion_matrix_data = confusionMatrix(y_test, y_prediction)
+    validator(confusion_matrix=confusion_matrix_data)
     TP = confusion_matrix_data.iloc[1, 1]
     FN = confusion_matrix_data.iloc[1, 0]
     result = (TP / (TP + FN))
