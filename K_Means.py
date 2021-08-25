@@ -131,7 +131,7 @@ class KMeans:
         self.dataset.reset_index(drop=True, inplace=True)
 
         # convert to numeric values
-        categoricalToNumeric(self.dataset)
+        self.dataset = categoricalToNumeric(self.dataset)
 
         # final preprocessing
         class_col = self.dataset.iloc[:, -1].copy()

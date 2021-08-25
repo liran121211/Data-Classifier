@@ -117,17 +117,19 @@ def categoricalToNumeric(dataset):
 
     if isinstance(dataset, pd.Series):
         pp.fit(dataset)
-        return pp.transform(dataset)
+        pp.transform(dataset)
+        return pp.transform(dataset) # returns ndarray object
 
     elif isinstance(dataset, list):
         dataset = ravel(dataset)
         pp.fit(dataset)
-        return pp.transform(dataset)
+        return pp.transform(dataset) # returns list object
     else:
         for column in dataset:
             if type(column[1]) is str:
                 pp.fit(dataset[column])
                 dataset[column] = pp.transform(dataset[column])
+        return dataset
 
 
 def discretization(dataset, column, bins, mode):
@@ -140,14 +142,28 @@ def discretization(dataset, column, bins, mode):
     """
     if mode == 'equal-width':
         try:
-            dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(65+bins)))])
+            column_len = len(dataset[column].unique())
+            if bins >= column_len:
+                bins = column_len
+                print('WARNING: Bins value is equal or greater than unique values in [{0}] column, Bins changed to {1}.'.format(column, column_len))
+                dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(64 + bins)))])
         except ValueError:
-            dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(65+bins)))], duplicates='drop')
+            dataset[column] = pd.qcut(x=dataset[column], q=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(64 + bins)))], duplicates='drop')
 
     elif mode == 'equal-frequency':
-        dataset[column] = pd.cut(x=dataset[column], bins=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(65+bins)))])
+        column_len = len(dataset[column].unique())
+        if bins >= column_len:
+            bins = column_len
+            print('WARNING: Bins value is equal or greater than unique values in [{0}] column, Bins changed to {1}.'
+                  .format(column, column_len))
+        dataset[column] = pd.cut(x=dataset[column], bins=bins, labels=[chr(i) for i in range(ord('A'), ord(chr(64 + bins)))])
 
     elif mode == 'entropy':
+        column_len = len(dataset[column].unique())
+        if bins >= column_len:
+            bins = column_len
+            print('WARNING: Bins value is equal or greater than unique values in [{0}] column, Bins changed to {1}.'
+                  .format(column, column_len))
         dataset[column] = categoricalToNumeric(dataset[column])
         dataset[column] = entropy_binning.bin_sequence(dataset[column], nbins=bins)
     else:
@@ -288,8 +304,8 @@ def entropyDiscretization(dataset, column, initial_split, bins_):
 
     # Binning the original array with best entropy values
     dataset[column] = pd.cut(dataset[column], new_bins, labels=[chr(i) for i in range(
-        ord('A'), ord(chr(65 + len(new_bins) - 1)))]).values.add_categories('other')
-    dataset[column] = dataset[column].fillna('other')
+        ord('A'), ord(chr(64 + len(new_bins) - 1)))]).values.add_categories('UNCATEGORIZED')
+    dataset[column] = dataset[column].fillna('UNCATEGORIZED')
 
     return dataset[column]
 
@@ -302,45 +318,55 @@ def validator(**kwargs):
     """
     if 'train_data' in kwargs and 'test_data' in kwargs:
         if kwargs['train_data'] is None or kwargs['test_data'] is None:
-            raise Exception("no train dataset or test dataset were loaded.")
+            print("FATAL ERROR: No train dataset or test dataset were loaded.")
+            exit()
 
         if not isinstance(kwargs['train_data'], pd.DataFrame) or not isinstance(kwargs['test_data'], pd.DataFrame):
-            raise Exception("train dataset or test dataset is not pandas DataFrame object.")
+            print("FATAL ERROR: Train dataset or test dataset is not pandas DataFrame object.")
+            exit()
 
         if len(kwargs['train_data']) == 0 or len(kwargs['test_data']) == 0:
-            raise Exception("train dataset or test dataset is empty.")
+            print("FATAL ERROR: Train dataset or test dataset is empty.")
+            exit()
 
     if 'confusion_matrix' in kwargs:
         if len(kwargs['confusion_matrix'].columns) < 2:
-            raise Exception('Cannot calculate Accuracy / Precision / Recall / F1-Score with 1D array as Confusion '
-                            'Matrix.')
+            print('FATAL ERROR: Cannot calculate Accuracy / Precision / Recall / F1-Score with 1D array as Confusion ''Matrix.')
+            exit()
     if 'bin' in kwargs:
         if kwargs['bin'] <= 0:
-            raise Exception("Bin value must be greater than 0.")
+            print("FATAL ERROR: Bin value must be greater than 0.")
+            exit()
 
     if 'threshold' in kwargs:
         if kwargs['threshold'] <= 0:
-            raise Exception("Threshold value must be greater than 0.")
+            print("FATAL ERROR: Threshold value must be greater than 0.")
+            exit()
 
     if 'max_depth' in kwargs:
         if kwargs['max_depth'] <= 0:
-            raise Exception("Max Depth value must be greater than 0.")
+            print("FATAL ERROR: Max Depth value must be greater than 0.")
+            exit()
 
     if 'random_state' in kwargs:
         if kwargs['random_state'] <= 0:
-            raise Exception("Random State value must be different than 0.")
+            print("FATAL ERROR: Random State value must be different than 0.")
+            exit()
 
     if 'k_neighbors' in kwargs:
         if kwargs['k_neighbors'] <= 0:
-            raise Exception("K-Neighbors value must be at least 1.")
+            print("FATAL ERROR: K-Neighbors value must be at least 1.")
+            exit()
 
     if 'k_means' in kwargs:
         if kwargs['k_means'] <= 0:
-            raise Exception("K-Means value must be at least 1.")
+            print("FATAL ERROR: K-Means value must be at least 1.")
+            exit()
 
     if 'max_iterations' in kwargs:
         if kwargs['max_iterations'] <= 0:
-            raise Exception("Max Iterations value must be at least 1.")
+            print("FATAL ERROR: Max Iterations value must be at least 1.")
+            exit()
 
 
 def loadingSign(state):

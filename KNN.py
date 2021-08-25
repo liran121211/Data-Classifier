@@ -80,8 +80,8 @@ class KNN:
         self.train_data.reset_index(drop=True, inplace=True)
         self.test_data.reset_index(drop=True, inplace=True)
 
-        categoricalToNumeric(self.train_data)
-        categoricalToNumeric(self.test_data)
+        self.train_data = categoricalToNumeric(self.train_data)
+        self.test_data = categoricalToNumeric(self.test_data)
 
     def prediction(self):
         """

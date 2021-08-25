@@ -1,3 +1,5 @@
+import os
+
 from Preprocessing import discretization, categoricalToNumeric, count_conditional_att, count_att, validator
 from sklearn.naive_bayes import GaussianNB
 
@@ -6,8 +8,8 @@ class NaiveBayes:
     def __init__(self, train_file, test_file, bins=None, discretization_mode=None):
         validator(train_data=train_file, test_data=test_file, bins=bins, discretization_mode=discretization_mode)
 
-        self.X_y_train = train_file
-        self.X_y_test = test_file
+        self.X_y_train = train_file.copy()
+        self.X_y_test = test_file.copy()
         self.y_train_col_name = train_file.iloc[:, -1].name
         self.class_probabilities = []
         self.X_train_col_names = []
@@ -149,21 +151,15 @@ class NaiveBayes_SKLearn:
     def __init__(self, train_file, test_file):
         validator(train_data=train_file, test_data=test_file)
         self.model = GaussianNB()
-        self.y_train = train_file.iloc[:, -1]
-        self.X_train = train_file.drop(columns=[train_file.iloc[:, -1].name], axis=0)
-        self.y_test = test_file.iloc[:, -1]
-        self.X_test = test_file.drop(columns=[test_file.iloc[:, -1].name], axis=0)
+        self.y_train = train_file.iloc[:, -1].copy()
+        self.X_train = train_file.drop(columns=[train_file.iloc[:, -1].name], axis=0).copy()
+        self.y_test = test_file.iloc[:, -1].copy()
+        self.X_test = test_file.drop(columns=[test_file.iloc[:, -1].name], axis=0).copy()
         self.y_prediction = []
         self.score = 0
 
     def run(self):
         # Preprocess data
-        print('Converting categorical data to numeric data...')
-        categoricalToNumeric(self.X_train)
-        categoricalToNumeric(self.y_train)
-        categoricalToNumeric(self.X_test)
-        categoricalToNumeric(self.y_test)
-
         self.X_train.dropna(inplace=True)
         self.y_train.dropna(inplace=True)
         self.X_test.dropna(inplace=True)
@@ -172,6 +168,12 @@ class NaiveBayes_SKLearn:
         self.X_train.reset_index(drop=True, inplace=True)
         self.X_test.reset_index(drop=True, inplace=True)
         self.y_test.reset_index(drop=True, inplace=True)
+
+        print('Converting categorical data to numeric data...')
+        self.X_train = categoricalToNumeric(self.X_train)
+        self.y_train = categoricalToNumeric(self.y_train)
+        self.X_test = categoricalToNumeric(self.X_test)
+        self.y_test = categoricalToNumeric(self.y_test)
 
         # Train Model
         print('Training Model...')
@@ -183,7 +185,7 @@ class NaiveBayes_SKLearn:
             print('\rCalculating: {0}%'.format(round(row / len(self.X_test) * 100, ndigits=3)), end='')
             prediction = self.model.predict([self.X_test.iloc[row]])
             self.y_prediction.append(prediction)
-            if prediction == self.y_test.iloc[row]:
+            if prediction == self.y_test[row]:
                 self.score += 1
 
         print('\r', end='')
