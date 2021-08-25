@@ -75,9 +75,9 @@ class DecisionTree:
 
         for value in node_unique_values:
             sub_table = self.get_sub_table(data, node, value)
-            if (sub_table.empty):
+            if sub_table.empty:
                 empty_sub_tables += 1
-            if (empty_sub_tables > 10):
+            if empty_sub_tables > 10:
                 print('\n\nFATAL ERROR: cannot create tree with empty sub tables, please try different discretization.')
                 exit()
             column_values, counts = np.unique(sub_table[data.columns[-1]], return_counts=True)
@@ -152,9 +152,9 @@ class DecisionTree:
         # Export clean file
         print('Exporting cleansed csv file...')
         self.train_data.to_csv(
-            os.path.join(os.getcwd(), "decision_tree_train_" + self.train_file_name[:-4] + "_clean.csv"))
+            os.path.join(os.getcwd(), "myFiles\\decision_tree_train_" + self.train_file_name[:-4] + "_clean.csv"))
         self.test_data.to_csv(
-            os.path.join(os.getcwd(), "decision_tree_test_" + self.train_file_name[:-4] + "_clean.csv"))
+            os.path.join(os.getcwd(), "myFiles\\decision_tree_test_" + self.train_file_name[:-4] + "_clean.csv"))
 
     def train(self):
         self.tree = self.build_tree(self.train_data)
@@ -226,13 +226,14 @@ class DecisionTreeSKLearn:
 
         # Export clean file
         print('Exporting cleansed csv file...')
-        X_y_train = merge(self.X_train, DataFrame(self.y_train, columns=['class']).iloc[:, -1], how='left',
+        X_y_train = merge(self.X_train, DataFrame(self.y_train, columns={0: 'class'}).iloc[:, -1], how='left',
                           left_index=True, right_index=True)
-        X_y_test = merge(self.X_test, DataFrame(self.y_test, columns=['class']).iloc[:, -1], how='left',
+        X_y_test = merge(self.X_test, DataFrame(self.y_test, columns={0: 'class'}).iloc[:, -1], how='left',
                          left_index=True, right_index=True)
         X_y_train.to_csv(
-            os.path.join(os.getcwd(), "decision_tree_sk_train_" + self.train_file_name[:-4] + "_clean.csv"))
-        X_y_test.to_csv(os.path.join(os.getcwd(), "decision_tree_sk_test_" + self.train_file_name[:-4] + "_clean.csv"))
+            os.path.join(os.getcwd(), "myFiles\\decision_tree_sk_train_" + self.train_file_name[:-4] + "_clean.csv"))
+        X_y_test.to_csv(
+            os.path.join(os.getcwd(), "myFiles\\decision_tree_sk_test_" + self.train_file_name[:-4] + "_clean.csv"))
 
         # Train Model
         print('Training Model...')

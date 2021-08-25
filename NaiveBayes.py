@@ -66,8 +66,9 @@ class NaiveBayes:
         # Export clean file
         print('Exporting cleansed csv file...')
         self.X_y_train.to_csv(
-            os.path.join(os.getcwd(), "naive_bayes_train_" + self.train_file_name[:-4] + "_clean.csv"))
-        self.X_y_test.to_csv(os.path.join(os.getcwd(), "naive_bayes_test_" + self.train_file_name[:-4] + "_clean.csv"))
+            os.path.join(os.getcwd(), "myFiles\\naive_bayes_train_" + self.train_file_name[:-4] + "_clean.csv"))
+        self.X_y_test.to_csv(
+            os.path.join(os.getcwd(), "myFiles\\naive_bayes_test_" + self.train_file_name[:-4] + "_clean.csv"))
         print("Initialized Data Completed!")
 
     def train(self):
@@ -89,11 +90,11 @@ class NaiveBayes:
                 if column != self.class_name:  # if (column) is not last classification column
                     no_dict[(column, value)] = count_conditional_att(self.X_y_train, column, value,
                                                                      self.class_name,
-                                                                     self.X_train_col_names[0],mode='naive-bayes')
+                                                                     self.X_train_col_names[0], mode='naive-bayes')
 
                     yes_dict[(column, value)] = count_conditional_att(self.X_y_train, column, value,
                                                                       self.class_name,
-                                                                      self.X_train_col_names[1],mode='naive-bayes')
+                                                                      self.X_train_col_names[1], mode='naive-bayes')
             i += 1
         print('\r', end='')
         self.class_probabilities.append(no_dict)
@@ -123,7 +124,7 @@ class NaiveBayes:
         p_class_n = count_att(self.X_y_test, self.class_name, self.X_train_col_names[0])
         p_class_y = count_att(self.X_y_test, self.class_name, self.X_train_col_names[1])
 
-        if (prod_prob_y * p_class_y > prod_prob_n * p_class_n):
+        if prod_prob_y * p_class_y > prod_prob_n * p_class_n:
             return self.X_train_col_names[1]
         else:
             return self.X_train_col_names[0]
@@ -189,13 +190,14 @@ class NaiveBayes_SKLearn:
 
         # Export clean file
         print('Exporting cleansed csv file...')
-        X_y_train = merge(self.X_train, DataFrame(self.y_train, columns=['class']).iloc[:, -1], how='left',
+        X_y_train = merge(self.X_train, DataFrame(self.y_train, columns={0: 'class'}).iloc[:, -1], how='left',
                           left_index=True, right_index=True)
-        X_y_test = merge(self.X_test, DataFrame(self.y_test, columns=['class']).iloc[:, -1], how='left',
+        X_y_test = merge(self.X_test, DataFrame(self.y_test, columns={0: 'class'}).iloc[:, -1], how='left',
                          left_index=True, right_index=True)
         X_y_train.to_csv(
-            os.path.join(os.getcwd(), "decision_tree_sk_train_" + self.train_file_name[:-4] + "_clean.csv"))
-        X_y_test.to_csv(os.path.join(os.getcwd(), "decision_tree_sk_test_" + self.train_file_name[:-4] + "_clean.csv"))
+            os.path.join(os.getcwd(), "myFiles\\decision_tree_sk_train_" + self.train_file_name[:-4] + "_clean.csv"))
+        X_y_test.to_csv(
+            os.path.join(os.getcwd(), "myFiles\\decision_tree_sk_test_" + self.train_file_name[:-4] + "_clean.csv"))
 
         # Train Model
         print('Training Model...')

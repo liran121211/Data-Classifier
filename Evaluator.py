@@ -29,7 +29,7 @@ def confusionMatrix(y_test, y_prediction, visual=False, textual=False):
 
     # Calculate Confusion Matrix
     if isinstance(y_test, pd.DataFrame):
-        confusion_matrix = pd.crosstab(y_test.iloc[:,-1], y_prediction, rownames=['Actual'], colnames=['Predicted'])
+        confusion_matrix = pd.crosstab(y_test.iloc[:, -1], y_prediction, rownames=['Actual'], colnames=['Predicted'])
     else:
         confusion_matrix = pd.crosstab(y_test, y_prediction, rownames=['Actual'], colnames=['Predicted'])
 
@@ -61,7 +61,7 @@ def accuracy(y_test, y_prediction, textual=False):
     result = (TP + TN) / TP_TN_FP_FN
 
     if textual:
-        print('Accuracy: %f' % result)
+        print('\nAccuracy: %f' % result)
 
     return result
 
@@ -185,7 +185,7 @@ def f1Score(y_test, y_prediction, textual=False):
     result = (2 * precision_score_ * recall_Score) / (precision_score_ + recall_Score)
 
     if textual:
-        print('F1 score: %f' % result)
+        print('F1-Score: %f' % result)
 
     return result
 
@@ -205,7 +205,7 @@ def f1ScoreSKLearn(y_test, y_prediction, textual=False):
     result = f1_score(y_test, y_prediction)
 
     if textual:
-        print('SKLearn Recall: %f' % result)
+        print('SKLearn F1-Score: %f' % result, '\n')
 
     return result
 
@@ -279,72 +279,72 @@ def analysis(obj):
     :return: evaluation accuracies
     """
     if obj.__class__.__name__ == "NaiveBayes":
-        confusionMatrix(y_test=obj.X_y_test.iloc[:,-1],y_prediction=obj.y_prediction,visual=True,textual=True)
-        accuracy(y_test=obj.X_y_test.iloc[:,-1],y_prediction=obj.y_prediction,textual=True)
-        accuracySKLearn(y_test=obj.X_y_test.iloc[:,-1],y_prediction=obj.y_prediction,textual=True)
-        precision(y_test=obj.X_y_test.iloc[:,-1],y_prediction=obj.y_prediction,textual=True)
-        precisionSKLearn(y_test=obj.X_y_test.iloc[:,-1],y_prediction=obj.y_prediction,textual=True)
-        recall(y_test=obj.X_y_test.iloc[:,-1],y_prediction=obj.y_prediction,textual=True)
-        recall_SKLearn(y_test=obj.X_y_test.iloc[:,-1], y_prediction=obj.y_prediction, textual=True)
-        f1Score(y_test=obj.X_y_test.iloc[:,-1], y_prediction=obj.y_prediction, textual=True)
-        f1ScoreSKLearn(y_test=obj.X_y_test.iloc[:,-1], y_prediction=obj.y_prediction, textual=True)
+        confusionMatrix(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, visual=True, textual=True)
+        accuracy(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        accuracySKLearn(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        precision(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        precisionSKLearn(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        recall(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        recall_SKLearn(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        f1Score(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        f1ScoreSKLearn(y_test=obj.X_y_test.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
         testAccuracy(obj=obj)
         trainAccuracy(obj=obj)
     elif obj.__class__.__name__ == "NaiveBayes_SKLearn":
-        confusionMatrix(y_test=obj.y_test,y_prediction=obj.y_prediction,visual=True,textual=True)
-        accuracy(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
-        accuracySKLearn(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
-        precision(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
-        precisionSKLearn(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
-        recall(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
+        confusionMatrix(y_test=obj.y_test, y_prediction=obj.y_prediction, visual=True, textual=True)
+        accuracy(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
+        accuracySKLearn(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
+        precision(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
+        precisionSKLearn(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
+        recall(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
         recall_SKLearn(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
         f1Score(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
         f1ScoreSKLearn(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
         testAccuracy(obj=obj)
         trainAccuracy(obj=obj)
     elif obj.__class__.__name__ == "DecisionTree":
-        confusionMatrix(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,visual=True,textual=True)
-        accuracy(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
-        accuracySKLearn(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
-        precision(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
-        precisionSKLearn(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
-        recall(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
+        confusionMatrix(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, visual=True, textual=True)
+        accuracy(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        accuracySKLearn(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        precision(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        precisionSKLearn(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        recall(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
         recall_SKLearn(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
         f1Score(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
         f1ScoreSKLearn(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
         testAccuracy(obj=obj)
         trainAccuracy(obj=obj)
     elif obj.__class__.__name__ == "DecisionTreeSKLearn":
-        confusionMatrix(y_test=obj.y_test,y_prediction=obj.y_prediction,visual=True,textual=True)
-        accuracy(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
-        accuracySKLearn(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
-        precision(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
-        precisionSKLearn(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
-        recall(y_test=obj.y_test,y_prediction=obj.y_prediction,textual=True)
+        confusionMatrix(y_test=obj.y_test, y_prediction=obj.y_prediction, visual=True, textual=True)
+        accuracy(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
+        accuracySKLearn(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
+        precision(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
+        precisionSKLearn(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
+        recall(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
         recall_SKLearn(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
         f1Score(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
         f1ScoreSKLearn(y_test=obj.y_test, y_prediction=obj.y_prediction, textual=True)
         testAccuracy(obj=obj)
         trainAccuracy(obj=obj)
     elif obj.__class__.__name__ == "KNN":
-        confusionMatrix(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,visual=True,textual=True)
-        accuracy(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
-        accuracySKLearn(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
-        precision(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
-        precisionSKLearn(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
-        recall(y_test=obj.test_data.iloc[:, -1],y_prediction=obj.y_prediction,textual=True)
+        confusionMatrix(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, visual=True, textual=True)
+        accuracy(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        accuracySKLearn(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        precision(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        precisionSKLearn(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
+        recall(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
         recall_SKLearn(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
         f1Score(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
         f1ScoreSKLearn(y_test=obj.test_data.iloc[:, -1], y_prediction=obj.y_prediction, textual=True)
         testAccuracy(obj=obj)
         trainAccuracy(obj=obj)
     elif obj.__class__.__name__ == "KMeans":
-        confusionMatrix(y_test=obj.class_,y_prediction=obj.result,visual=True,textual=True)
-        accuracy(y_test=obj.class_,y_prediction=obj.result,textual=True)
-        accuracySKLearn(y_test=obj.class_,y_prediction=obj.result,textual=True)
-        precision(y_test=obj.class_,y_prediction=obj.result,textual=True)
-        precisionSKLearn(y_test=obj.class_,y_prediction=obj.result,textual=True)
-        recall(y_test=obj.class_,y_prediction=obj.result,textual=True)
+        confusionMatrix(y_test=obj.class_, y_prediction=obj.result, visual=True, textual=True)
+        accuracy(y_test=obj.class_, y_prediction=obj.result, textual=True)
+        accuracySKLearn(y_test=obj.class_, y_prediction=obj.result, textual=True)
+        precision(y_test=obj.class_, y_prediction=obj.result, textual=True)
+        precisionSKLearn(y_test=obj.class_, y_prediction=obj.result, textual=True)
+        recall(y_test=obj.class_, y_prediction=obj.result, textual=True)
         recall_SKLearn(y_test=obj.class_, y_prediction=obj.result, textual=True)
         f1Score(y_test=obj.class_, y_prediction=obj.result, textual=True)
         f1ScoreSKLearn(y_test=obj.class_, y_prediction=obj.result, textual=True)
